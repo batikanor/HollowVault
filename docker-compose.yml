@@ -1,0 +1,27 @@
+services:
+  signer:
+    build:
+      context: ./signer
+      dockerfile: Dockerfile
+    container_name: hollow-vault-edge
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SIGNER_PORT: 8080
+      ORBITPORT_MODE: ${ORBITPORT_MODE:-mock}
+      ORBITPORT_API_URL: ${ORBITPORT_API_URL:-https://op.spacecomputer.io/api/v1/services/trng}
+      ORBITPORT_AUTH_URL: ${ORBITPORT_AUTH_URL:-https://spacecomputer.eu.auth0.com/oauth/token}
+      ORBITPORT_AUDIENCE: ${ORBITPORT_AUDIENCE:-https://op.spacecomputer.io}
+      ORBITPORT_CLIENT_ID: ${ORBITPORT_CLIENT_ID:-}
+      ORBITPORT_CLIENT_SECRET: ${ORBITPORT_CLIENT_SECRET:-}
+    volumes:
+      - signer-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  signer-data:

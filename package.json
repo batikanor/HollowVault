@@ -1,0 +1,39 @@
+{
+  "name": "hollow-vault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ECDSA signer that sources its nonce entropy from cosmic radiation, attested by a satellite. Built for ETHPrague 2026 SpaceComputer bounty.",
+  "workspaces": [
+    "signer",
+    "web",
+    "cli"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces --include-workspace-root",
+    "dev": "concurrently -k -n signer,web -c cyan,magenta \"npm:dev:signer\" \"npm:dev:web\"",
+    "dev:signer": "npm --workspace signer run dev",
+    "dev:web": "npm --workspace web run dev",
+    "build": "npm --workspace signer run build && npm --workspace web run build && npm --workspace cli run build",
+    "start": "concurrently -k -n signer,web -c cyan,magenta \"npm:start:signer\" \"npm:start:web\"",
+    "start:signer": "npm --workspace signer run start",
+    "start:web": "npm --workspace web run start",
+    "smoke": "tsx scripts/smoke.ts",
+    "sim:contract": "tsx scripts/contract-sim.ts",
+    "test:unit": "node --import tsx --test tests/payload-binding.test.ts tests/verifier.test.ts tests/batch.test.ts tests/eip712.test.ts tests/nonce-attack.test.ts tests/local-signer.test.ts tests/policy.test.ts tests/audit.test.ts",
+    "test:kms": "node --env-file=.env --import tsx --test tests/kms-integration.test.ts",
+    "test": "npm run test:unit && npm run smoke && npm run sim:contract",
+    "test:contracts": "cd contracts && PATH=\"$HOME/.foundry/bin:$PATH\" forge test",
+    "deploy:local": "bash scripts/deploy-local.sh",
+    "anvil": "PATH=\"$HOME/.foundry/bin:$PATH\" anvil --chain-id 31337 --port 8545",
+    "cli": "npm --workspace cli run dev --",
+    "alt-ui": "node alt-ui/serve.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
