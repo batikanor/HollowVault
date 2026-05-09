@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hollow Vault — Bulletin No. 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://rsms.me/" />
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+<style>
+  :root {
+    --paper: #f5f4ef;
+    --ink: #0c0b0a;
+    --ink-soft: #4a4944;
+    --rule: #1f1d1a;
+    --red: #e63946;
+    --hairline: rgba(12, 11, 10, 0.16);
+  }
+  * { box-sizing: border-box; }
+  html { font-family: "Inter", "Inter var", system-ui, sans-serif; font-feature-settings: "ss01", "cv11"; }
+  @supports (font-variation-settings: normal) {
+    html { font-family: "Inter var", system-ui, sans-serif; }
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 56px 56px 120px; }
+  @media (max-width: 720px) { .wrap { padding: 32px 24px 80px; } }
+
+  /* Masthead */
+  .masthead {
+    border-top: 4px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 14px 0 10px;
+    margin-bottom: 36px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 16px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .masthead .left, .masthead .right { display: flex; gap: 24px; opacity: 0.75; }
+  .masthead .right { justify-content: flex-end; }
+  .masthead .mark {
+    font-weight: 900;
+    font-size: 32px;
+    letter-spacing: -0.04em;
+    text-transform: none;
+    text-align: center;
+    line-height: 1;
+  }
+  .masthead .mark sup { font-size: 11px; font-weight: 600; vertical-align: top; margin-left: 4px; opacity: 0.6; }
+
+  /* Hero */
+  .hero {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 32px;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 36px;
+    margin-bottom: 36px;
+  }
+  @media (max-width: 720px) { .hero { grid-template-columns: 1fr; } }
+  .hero h1 {
+    margin: 0;
+    font-size: clamp(38px, 6vw, 78px);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    font-weight: 900;
+  }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero .deck {
+    margin: 24px 0 0;
+    font-size: 17px;
+    line-height: 1.4;
+    max-width: 60ch;
+  }
+  .hero aside {
+    border-left: 1px solid var(--hairline);
+    padding-left: 24px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    align-self: end;
+  }
+  .hero aside dt { color: var(--ink-soft); margin-top: 12px; }
+  .hero aside dd { margin: 2px 0 0; font-feature-settings: "tnum"; word-break: break-all; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  .hero aside dd .red { color: var(--red); }
+
+  /* Sections */
+  .section { display: grid; grid-template-columns: 1fr 11fr; gap: 24px; padding: 32px 0; border-top: 1px solid var(--ink); }
+  .section .num { font-size: 14px; font-weight: 900; letter-spacing: 0.05em; }
+  .section .body { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+  .section h2 { grid-column: span 4; margin: 0; font-size: 28px; line-height: 1; letter-spacing: -0.025em; font-weight: 800; }
+  @media (max-width: 720px) {
+    .section { grid-template-columns: 1fr; }
+    .section .body { grid-template-columns: 1fr; }
+    .section h2 { grid-column: 1; }
+  }
+  .section .lede { grid-column: span 8; font-size: 15px; line-height: 1.55; max-width: 70ch; }
+  .section .lede p { margin: 0 0 12px; }
+
+  /* Form */
+  .composer { grid-column: span 8; margin-top: 12px; }
+  .composer label { display:block; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+  textarea {
+    width: 100%; min-height: 100px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    padding: 16px;
+    font: inherit;
+    font-size: 16px;
+    resize: vertical;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--red); }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  button {
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 14px 24px;
+    cursor: pointer;
+    transition: transform 0.06s ease, background 0.15s, color 0.15s;
+  }
+  button:hover { background: var(--red); border-color: var(--red); }
+  button:active { transform: translateY(1px); }
+  button.outline { background: transparent; color: var(--ink); }
+  button.outline:hover { background: var(--ink); color: var(--paper); }
+
+  /* Big numbers / data prints */
+  .figs { grid-column: span 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--ink); border: 1px solid var(--ink); }
+  @media (max-width: 720px) { .figs { grid-template-columns: 1fr 1fr; } }
+  .fig { background: var(--paper); padding: 18px 20px; }
+  .fig .l { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-soft); }
+  .fig .v { font-size: 36px; font-weight: 800; line-height: 1; margin-top: 8px; letter-spacing: -0.03em; font-feature-settings: "tnum"; }
+
+  /* Hash slabs */
+  .slabs { grid-column: span 12; display: grid; gap: 10px; }
+  .slab {
+    border-top: 1px solid var(--hairline);
+    padding-top: 10px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  @media (max-width: 720px) { .slab { grid-template-columns: 1fr; } }
+  .slab .key { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-soft); }
+  .slab .val { font-family: "Inter var", monospace; font-feature-settings: "tnum", "ss01", "cv11"; font-size: 13.5px; word-break: break-all; }
+
+  /* Steps */
+  .steps { grid-column: span 12; display: grid; gap: 8px; margin-top: 8px; }
+  .step { display: grid; grid-template-columns: 32px 1fr auto; gap: 14px; align-items: center; padding: 10px 14px; border: 1px solid var(--hairline); }
+  .step .n { font-size: 13px; font-weight: 800; }
+  .step .label { font-size: 14px; }
+  .step .res { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+  .step.ok { border-color: var(--ink); }
+  .step.ok .res { color: var(--ink); }
+  .step.fail { border-color: var(--red); }
+  .step.fail .res { color: var(--red); }
+  .step.pend .res { color: var(--ink-soft); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--ink);
+    margin-top: 48px;
+    padding-top: 18px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-soft);
+  }
+  pre.attest {
+    grid-column: span 12;
+    margin: 0; padding: 16px;
+    background: var(--ink); color: var(--paper);
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    overflow: auto;
+    max-height: 280px;
+  }
+  details summary { cursor: pointer; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 0; color: var(--ink-soft); }
+  details[open] summary { color: var(--ink); }
+
+  /* Example picker — list of cataloged messages, like a journal contents page */
+  .toc {
+    margin: 14px 0 18px;
+    border-top: 1px solid var(--ink);
+    padding-top: 14px;
+  }
+  .toc .toc-label {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 10px;
+  }
+  .toc-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 14px;
+  }
+  .toc-item {
+    background: transparent; border: 0; cursor: pointer;
+    text-align: left; padding: 8px 0;
+    border-top: 1px solid var(--hairline);
+    font: inherit;
+    display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: baseline;
+  }
+  .toc-item .n { font-weight: 800; font-size: 12px; color: var(--ink-soft); font-feature-settings: "tnum"; }
+  .toc-item .t { font-size: 14px; font-weight: 600; line-height: 1.2; }
+  .toc-item .b { font-size: 11px; color: var(--ink-soft); margin-top: 2px; grid-column: 2; line-height: 1.35; }
+  .toc-item:hover .t { color: var(--red); }
+  .toc-item.active .t { color: var(--red); }
+  .toc-item.active .n { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="left">
+      <span>Vol. I</span>
+      <span>No. 001</span>
+      <span id="datestamp">—</span>
+    </div>
+    <div class="mark">Hollow Vault<sup>↗</sup></div>
+    <div class="right">
+      <span id="modepill">probing…</span>
+      <span>Bulletin</span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div>
+      <h1>The signer was <em>never</em> in the room.</h1>
+      <p class="deck">An Ethereum signing primitive whose private key was created inside SpaceComputer's Orbitport KMS and signs there. Each signature is bound to a fresh satellite-attested cosmic-randomness draw. The chain verifies offline.</p>
+    </div>
+    <aside>
+      <dl>
+        <dt>Signer type</dt>
+        <dd id="aside-type" class="red">—</dd>
+        <dt>Address</dt>
+        <dd id="aside-addr">—</dd>
+        <dt>Key ID</dt>
+        <dd id="aside-keyid">—</dd>
+        <dt>Mode</dt>
+        <dd id="aside-mode">—</dd>
+      </dl>
+    </aside>
+  </section>
+
+  <section class="section">
+    <div class="num">01</div>
+    <div class="body">
+      <h2>Compose the message you intend to sign.</h2>
+      <div class="lede">
+        <p>The message is keccak256-hashed locally before transmission. Cosmic entropy is fetched from Orbitport, satellite-attested, and folded into the signed payload alongside the message hash and an ISO timestamp.</p>
+      </div>
+      <div class="composer">
+        <div class="toc">
+          <div class="toc-label">Catalogue of demonstrable signing patterns</div>
+          <div class="toc-grid" id="toc"></div>
+        </div>
+        <label for="msg">Payload</label>
+        <textarea id="msg" rows="11"></textarea>
+        <div class="actions">
+          <button id="btn-sign">Acquire signature →</button>
+          <button class="outline" id="btn-verify">Re-verify last</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="num">02</div>
+    <div class="body">
+      <h2>The artifact, presented at scale.</h2>
+      <div class="lede">
+        <p>Once the orbital signing operation returns, four data points define the attestation. They are reproduced here as fixed-width plates, in the order a verifier reads them.</p>
+      </div>
+      <div class="figs">
+        <div class="fig"><div class="l">Signature</div><div class="v" id="fig-sig">—</div></div>
+        <div class="fig"><div class="l">Cosmic seed</div><div class="v" id="fig-seed">—</div></div>
+        <div class="fig"><div class="l">Recovery</div><div class="v" id="fig-rec">—</div></div>
+        <div class="fig"><div class="l">Latency</div><div class="v" id="fig-lat">—</div></div>
+      </div>
+      <div class="slabs" style="margin-top:18px;">
+        <div class="slab"><div class="key">Message hash</div><div class="val" id="slab-mh">—</div></div>
+        <div class="slab"><div class="key">Payload hash</div><div class="val" id="slab-ph">—</div></div>
+        <div class="slab"><div class="key">Cosmic source</div><div class="val" id="slab-cs">—</div></div>
+        <div class="slab"><div class="key">Signed at</div><div class="val" id="slab-ts">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="num">03</div>
+    <div class="body">
+      <h2>Five checks. All must pass.</h2>
+      <div class="lede">
+        <p>The verifier requires no SpaceComputer credentials and runs offline. It re-derives the message hash, the satellite's signature digest, the payload binding, and the secp256k1 recovery — and refuses anything older than the freshness window.</p>
+      </div>
+      <div class="steps" id="steps">
+        <div class="step pend"><div class="n">i.</div><div class="label">Message hash</div><div class="res">pending</div></div>
+        <div class="step pend"><div class="n">ii.</div><div class="label">Satellite signature</div><div class="res">pending</div></div>
+        <div class="step pend"><div class="n">iii.</div><div class="label">Cosmic ↔ message binding</div><div class="res">pending</div></div>
+        <div class="step pend"><div class="n">iv.</div><div class="label">ECDSA recovery</div><div class="res">pending</div></div>
+        <div class="step pend"><div class="n">v.</div><div class="label">Cosmic timestamp freshness</div><div class="res">pending</div></div>
+      </div>
+      <details style="grid-column: span 12; margin-top: 14px;">
+        <summary>Raw attestation envelope ▾</summary>
+        <pre class="attest" id="raw">—</pre>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <span>hollow-vault · ETHPrague 2026</span>
+    <span id="footer-clock">—</span>
+    <span>OAuth · KMS · cTRNG</span>
+  </footer>
+</div>
+
+<script src="examples.js"></script>
+<script src="setup-banner.js"></script>
+<script>window.hollowVaultMountSetupBanner && window.hollowVaultMountSetupBanner("http://localhost:8080");</script>
+<script>
+  const SIGNER = "http://localhost:8080";
+  const VERIFIER = "http://localhost:4747/api/verify";
+  const $ = (id) => document.getElementById(id);
+  let last = null;
+  let activeEx = 0;
+
+  function loadExample(idx) {
+    activeEx = idx;
+    $("msg").value = window.hollowVaultLoadExample(idx, window.SIGNER_ADDR);
+    [...document.querySelectorAll(".toc-item")].forEach((el, i) =>
+      el.classList.toggle("active", i === idx),
+    );
+  }
+
+  // Build the TOC
+  window.HOLLOW_VAULT_EXAMPLES.forEach((ex, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "toc-item";
+    b.innerHTML = `<span class="n">${String(i+1).padStart(2,'0')}</span>` +
+                  `<span><span class="t">${ex.title}</span><span class="b">${ex.blurb}</span></span>`;
+    b.addEventListener("click", () => loadExample(i));
+    $("toc").appendChild(b);
+  });
+
+  function fmtDate() {
+    const d = new Date();
+    const opts = { day: "2-digit", month: "long", year: "numeric" };
+    return d.toLocaleDateString("en-GB", opts);
+  }
+  function fmtClock() {
+    const d = new Date();
+    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  $("datestamp").textContent = fmtDate();
+  setInterval(() => { $("footer-clock").textContent = fmtClock() + " UTC+02"; }, 1000);
+
+  async function probe() {
+    try {
+      const j = await (await fetch(`${SIGNER}/identity`)).json();
+      window.SIGNER_ADDR = j.address;
+      $("aside-type").textContent = j.signerType === "kms" ? "Orbitport KMS · off-device" : "local fallback";
+      $("aside-addr").textContent = j.address;
+      $("aside-keyid").textContent = j.keyId;
+      $("aside-mode").textContent = j.mode;
+      $("modepill").textContent = j.mode === "real" ? "Live · KMS" : "Mock";
+    } catch (e) {
+      $("modepill").textContent = "Offline";
+    } finally {
+      loadExample(activeEx);
+    }
+  }
+
+  function setStep(idx, ok, detail) {
+    const s = $("steps").children[idx];
+    if (!s) return;
+    s.className = "step " + (ok === null ? "pend" : ok ? "ok" : "fail");
+    s.lastElementChild.textContent = ok === null ? "pending" : ok ? "pass" : "fail";
+    s.lastElementChild.title = detail || "";
+  }
+
+  function shorten(h) { return h && h.length > 22 ? h.slice(0, 12) + "…" + h.slice(-6) : h; }
+
+  $("btn-sign").addEventListener("click", async () => {
+    const msg = $("msg").value.trim();
+    if (!msg) return;
+    [...$("steps").children].forEach((_, i) => setStep(i, null));
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${SIGNER}/sign`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const att = await r.json();
+      if (!r.ok) throw new Error(att.error);
+      const dt = Math.round(performance.now() - t0);
+      last = att;
+      $("fig-sig").textContent = shorten(att.signature);
+      $("fig-seed").textContent = "0x" + shorten(att.cosmic.seed);
+      $("fig-rec").textContent = att.recoveryId;
+      $("fig-lat").textContent = `${dt}ms`;
+      $("slab-mh").textContent = att.messageHash;
+      $("slab-ph").textContent = att.payloadHash;
+      $("slab-cs").textContent = `${att.cosmic.source}${att.cosmic.apiSrc ? " · " + att.cosmic.apiSrc : ""}`;
+      $("slab-ts").textContent = att.signedAt;
+      $("raw").textContent = JSON.stringify(att, null, 2);
+      await verify(att);
+    } catch (e) {
+      alert("Sign failed: " + e.message);
+    }
+  });
+
+  $("btn-verify").addEventListener("click", () => last && verify(last));
+
+  async function verify(att) {
+    try {
+      const r = await fetch(VERIFIER, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(att),
+      });
+      const rep = await r.json();
+      rep.steps.forEach((s, i) => setStep(i, s.ok, s.detail));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  probe();
+</script>
+</body>
+</html>
