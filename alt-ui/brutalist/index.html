@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>The Cosmic Dispatch · Late Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Special+Elite&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f1ece1;
+    --paper-2: #ece4d2;
+    --ink: #181614;
+    --ink-soft: #4d463c;
+    --red: #b6272f;
+    --gold: #b48a3c;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0; min-height: 100vh;
+    color: var(--ink);
+    font-family: "Old Standard TT", "Times New Roman", Georgia, serif;
+    font-size: 15px; line-height: 1.5;
+    background:
+      radial-gradient(circle at 18% 22%, rgba(0,0,0,0.04) 0%, transparent 40%),
+      radial-gradient(circle at 86% 78%, rgba(0,0,0,0.03) 0%, transparent 45%),
+      var(--paper);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(0,0,0,0.014) 0 1px, transparent 1px),
+      radial-gradient(circle at 38% 64%, rgba(0,0,0,0.014) 0 1px, transparent 1px),
+      radial-gradient(circle at 71% 12%, rgba(0,0,0,0.014) 0 1px, transparent 1px),
+      radial-gradient(circle at 88% 84%, rgba(0,0,0,0.014) 0 1px, transparent 1px);
+    background-size: 7px 7px, 11px 11px, 13px 13px, 17px 17px;
+    opacity: 0.7;
+  }
+  .paper { max-width: 1180px; margin: 0 auto; padding: 36px 44px 80px; position: relative; z-index: 1; }
+  @media (max-width: 720px) { .paper { padding: 24px 18px 60px; } }
+
+  .nameplate {
+    border-top: 4px double var(--ink);
+    border-bottom: 4px double var(--ink);
+    padding: 14px 0 10px;
+    text-align: center;
+  }
+  .nameplate h1 {
+    font-family: "Playfair Display", "Old Standard TT", serif;
+    font-weight: 900;
+    font-size: clamp(40px, 7vw, 84px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .nameplate .strap {
+    display: flex; justify-content: space-between;
+    font-family: "Special Elite", monospace;
+    font-size: 12px; letter-spacing: 0.1em;
+    margin-top: 8px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .nameplate .strap b { color: var(--ink); }
+
+  .deck {
+    text-align: center;
+    font-family: "Playfair Display", serif;
+    font-style: italic;
+    font-size: 18px;
+    margin: 20px auto 30px;
+    max-width: 60ch;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 22px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr 1fr;
+    gap: 32px;
+    border-bottom: 4px double var(--ink);
+    padding-bottom: 28px;
+  }
+  @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+
+  .col h2 {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 22px;
+    line-height: 1.05;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+    letter-spacing: -0.005em;
+  }
+  .col .sub {
+    font-family: "Special Elite", monospace;
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 8px;
+  }
+  .col .rule { border-top: 1px solid var(--ink); margin: 14px 0; }
+  .col p { margin: 0 0 10px; }
+  .col .dropcap::first-letter {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 64px;
+    line-height: 0.85;
+    float: left;
+    padding: 4px 8px 0 0;
+    color: var(--ink);
+  }
+  .col.center { columns: 2; column-gap: 28px; column-rule: 1px solid var(--ink); }
+  .col.center > * { break-inside: avoid; }
+  @media (max-width: 980px) { .col.center { columns: 1; } }
+
+  .compose {
+    border: 2px solid var(--ink);
+    padding: 14px 16px;
+    background: var(--paper-2);
+    margin-bottom: 14px;
+  }
+  .compose label { display: block; font-family: "Special Elite", monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px; }
+  textarea {
+    width: 100%; min-height: 110px;
+    background: transparent; border: 0;
+    font-family: "Special Elite", "Courier New", monospace;
+    font-size: 14px; line-height: 1.45;
+    color: var(--ink); resize: vertical;
+    outline: none;
+    padding: 4px 0;
+  }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  button {
+    background: var(--ink); color: var(--paper);
+    border: 0;
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 14px; letter-spacing: 0.06em;
+    padding: 12px 22px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.1s;
+    box-shadow: 4px 4px 0 var(--ink);
+    transform: translate(-2px, -2px);
+  }
+  button:hover { background: var(--red); box-shadow: 6px 6px 0 var(--ink); transform: translate(-3px, -3px); }
+  button:active { box-shadow: 2px 2px 0 var(--ink); transform: translate(0,0); }
+  button.ghost { background: var(--paper); color: var(--ink); border: 2px solid var(--ink); }
+  button.ghost:hover { background: var(--ink); color: var(--paper); }
+
+  .byline {
+    font-family: "Special Elite", monospace;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+
+  .verdict {
+    margin: 18px 0;
+    border-top: 6px double var(--ink);
+    border-bottom: 6px double var(--ink);
+    padding: 16px 0;
+    text-align: center;
+  }
+  .verdict .tag {
+    font-family: "Special Elite", monospace;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .verdict .word {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 56px; line-height: 1;
+    text-transform: uppercase;
+    margin-top: 4px;
+    letter-spacing: -0.01em;
+  }
+  .verdict.ok .word { color: var(--ink); }
+  .verdict.fail .word { color: var(--red); }
+  .verdict.pending .word { color: var(--ink-soft); }
+
+  .ledger {
+    border: 2px solid var(--ink);
+    padding: 12px;
+    background: var(--paper-2);
+    font-family: "Special Elite", monospace;
+    font-size: 12px;
+  }
+  .ledger h3 {
+    font-family: "Playfair Display", serif;
+    font-size: 18px; font-weight: 900;
+    margin: 0 0 8px; text-transform: uppercase;
+  }
+  .ledger table { width: 100%; border-collapse: collapse; }
+  .ledger td { padding: 4px 0; border-bottom: 1px dotted var(--ink-soft); vertical-align: top; word-break: break-all; }
+  .ledger td.k { width: 38%; color: var(--ink-soft); padding-right: 8px; }
+  .ledger td.v { font-feature-settings: "tnum"; }
+
+  .checks-list { list-style: none; padding: 0; margin: 0; }
+  .checks-list li {
+    border-bottom: 1px solid var(--ink-soft);
+    padding: 8px 0;
+    display: grid;
+    grid-template-columns: 30px 1fr auto;
+    gap: 10px;
+    font-family: "Special Elite", monospace;
+    font-size: 12px;
+  }
+  .checks-list li .n { font-weight: bold; }
+  .checks-list li .r { letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+  .checks-list li.ok .r { color: var(--ink); }
+  .checks-list li.fail .r { color: var(--red); font-weight: bold; }
+
+  .stamp {
+    display: inline-block;
+    border: 3px solid var(--red);
+    color: var(--red);
+    font-family: "Special Elite", monospace;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 0.18em;
+    padding: 6px 16px;
+    transform: rotate(-6deg);
+    text-transform: uppercase;
+    margin-top: 14px;
+  }
+
+  .ad-strip {
+    margin-top: 24px;
+    border-top: 1px solid var(--ink);
+    padding-top: 12px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
+    font-family: "Special Elite", monospace;
+    font-size: 11px;
+  }
+  @media (max-width: 720px) { .ad-strip { grid-template-columns: 1fr; } }
+  .ad-strip h4 { font-family: "Playfair Display", serif; font-weight: 900; font-size: 14px; text-transform: uppercase; margin: 0 0 4px; }
+  .ad-strip .ad { border: 2px solid var(--ink); padding: 10px 12px; }
+  .ad-strip .ad b { color: var(--red); }
+
+  pre.transcript {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    background: var(--paper-2);
+    border: 1px solid var(--ink-soft);
+    font-family: "Special Elite", monospace;
+    font-size: 10.5px;
+    max-height: 220px;
+    overflow: auto;
+  }
+
+  details summary { cursor: pointer; color: var(--ink-soft); font-family: "Special Elite", monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; }
+  details[open] summary { color: var(--ink); }
+
+  .colophon {
+    text-align: center;
+    font-family: "Special Elite", monospace;
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 18px;
+  }
+
+  /* From the wires */
+  .wires {
+    border: 2px solid var(--ink);
+    background: var(--paper-2);
+    padding: 14px 16px;
+    margin: 18px 0;
+  }
+  .wires h3 {
+    font-family: "Playfair Display", serif;
+    font-weight: 900;
+    font-size: 18px;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 6px;
+  }
+  .wires ol { padding-left: 0; margin: 0; list-style: none; counter-reset: wire; }
+  .wires li {
+    counter-increment: wire;
+    border-bottom: 1px dotted var(--ink-soft);
+    padding: 8px 0;
+  }
+  .wires li:last-child { border-bottom: 0; }
+  .wires li::before {
+    content: counter(wire, decimal-leading-zero) ".";
+    font-family: "Special Elite", monospace;
+    font-weight: bold;
+    margin-right: 8px;
+    color: var(--ink-soft);
+  }
+  .wires button {
+    all: unset; cursor: pointer;
+    font-family: "Playfair Display", serif;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.2;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    color: var(--ink);
+    box-shadow: none; transform: none;
+    text-transform: none; letter-spacing: 0;
+    padding: 0;
+  }
+  .wires button:hover { color: var(--red); background: transparent; }
+  .wires button:hover + .wire-meta { color: var(--ink); }
+  .wires .wire-meta {
+    font-family: "Special Elite", monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    display: block;
+  }
+  .wires li.active button { color: var(--red); }
+  .wires li.active .wire-meta { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="paper">
+
+  <div class="nameplate">
+    <div class="strap">
+      <span>VOL. <b>I</b></span>
+      <span><b>ETHPRAGUE</b> · LATE EDITION</span>
+      <span>ISSUE <b>№ 1</b></span>
+    </div>
+    <h1>The Cosmic Dispatch</h1>
+    <div class="strap">
+      <span id="datestamp">—</span>
+      <span><b>SIGNED OFF-DEVICE</b></span>
+      <span id="status-strap">—</span>
+    </div>
+  </div>
+
+  <p class="deck">"The signer was never in the room." — A telegraphed report on a private key that was created, held, and used aboard SpaceComputer's orbital key-management service.</p>
+
+  <div class="layout">
+
+    <section class="col">
+      <div class="byline">From our Own Correspondent</div>
+      <h2>Compose<br/>your<br/>dispatch.</h2>
+      <p class="dropcap">Each missive is keccak-hashed before transmission, anchored to a fresh draw of cosmic randomness from on-orbit sensors, and signed by a key that this newspaper does not, and cannot, hold.</p>
+
+      <div class="wires">
+        <h3>From the wires</h3>
+        <ol id="wires"></ol>
+      </div>
+
+      <div class="compose">
+        <label>Wire copy</label>
+        <textarea id="msg" rows="11"></textarea>
+        <div class="actions">
+          <button id="btn-sign">Dispatch ✦</button>
+          <button class="ghost" id="btn-verify">Re-verify</button>
+        </div>
+      </div>
+      <div class="byline">Filed via Orbitport · auth.spacecomputer.io</div>
+    </section>
+
+    <section class="col center">
+      <h2>The Verdict.</h2>
+      <div class="byline" id="verdict-byline">awaiting transmission</div>
+
+      <div class="verdict pending" id="verdict">
+        <span class="tag">Verifier returned</span>
+        <div class="word" id="verdict-word">PENDING</div>
+      </div>
+
+      <ul class="checks-list" id="checks">
+        <li><span class="n">i.</span><span>Message digest matches keccak256.</span><span class="r">pending</span></li>
+        <li><span class="n">ii.</span><span>Satellite signed the cosmic seed.</span><span class="r">pending</span></li>
+        <li><span class="n">iii.</span><span>Cosmic seed bound to this exact message.</span><span class="r">pending</span></li>
+        <li><span class="n">iv.</span><span>ECDSA recovery yields claimed signer.</span><span class="r">pending</span></li>
+        <li><span class="n">v.</span><span>Cosmic timestamp within fresh window.</span><span class="r">pending</span></li>
+      </ul>
+
+      <details>
+        <summary>Verbatim transcript ▾</summary>
+        <pre class="transcript" id="raw">no dispatch on file.</pre>
+      </details>
+    </section>
+
+    <section class="col">
+      <h2>Of record.</h2>
+      <div class="ledger">
+        <h3>Particulars</h3>
+        <table>
+          <tr><td class="k">Mode</td><td class="v" id="r-mode">—</td></tr>
+          <tr><td class="k">Signer</td><td class="v" id="r-type">—</td></tr>
+          <tr><td class="k">Address</td><td class="v" id="r-addr">—</td></tr>
+          <tr><td class="k">Key ID</td><td class="v" id="r-keyid">—</td></tr>
+          <tr><td class="k">Sigs filed</td><td class="v" id="r-count">0</td></tr>
+          <tr><td class="k">Last latency</td><td class="v" id="r-lat">—</td></tr>
+        </table>
+      </div>
+      <div id="stamp-slot"></div>
+    </section>
+
+  </div>
+
+  <div class="ad-strip">
+    <div class="ad">
+      <h4>Notice to readers</h4>
+      <p>This bulletin maintains its own offline verifier. <b>No SpaceComputer credentials</b> are required to confirm a published signature.</p>
+    </div>
+    <div class="ad">
+      <h4>Wanted, by the operator</h4>
+      <p>Persons who can produce a copy of this private key. <b>Reward: nil.</b> The key was never on this device.</p>
+    </div>
+    <div class="ad">
+      <h4>Methods</h4>
+      <p>secp256k1 · DIGEST mode · @spacecomputer-io/orbitport-sdk-ts · cosmic seed bound into payloadHash via keccak256.</p>
+    </div>
+  </div>
+
+  <div class="colophon">— set in Playfair Display & Special Elite · printed at localhost on demand —</div>
+</div>
+
+<script src="examples.js"></script>
+<script src="setup-banner.js"></script>
+<script>window.hollowVaultMountSetupBanner && window.hollowVaultMountSetupBanner("http://localhost:8080");</script>
+<script>
+  const SIGNER = "http://localhost:8080";
+  const VERIFIER = "http://localhost:4747/api/verify";
+  const $ = (id) => document.getElementById(id);
+  let last = null, count = 0, activeEx = 0;
+
+  // Fictional newspaper headlines, each loading one signing pattern.
+  const HEADLINES = [
+    { title: "Reader requests authentication; pen and paper sufficient",       sub: "Login challenge · EIP-4361" },
+    { title: "Voter casts ballot on Uniswap proposal forty-two",                sub: "DAO governance · cosmic-timestamped" },
+    { title: "Sealed envelope delivered for lot at the Punk auction",            sub: "Anti-MEV bid · commit-reveal" },
+    { title: "Anonymous resident makes prediction; thunderstorms expected",      sub: "On-the-record · timestamped in orbit" },
+    { title: "Source confides explosive document; identity withheld",            sub: "Whistleblower disclosure · key held off-device" },
+  ];
+
+  function loadExample(idx) {
+    activeEx = idx;
+    $("msg").value = window.hollowVaultLoadExample(idx, window.SIGNER_ADDR);
+    [...document.querySelectorAll("#wires li")].forEach((li, i) =>
+      li.classList.toggle("active", i === idx),
+    );
+  }
+  HEADLINES.forEach((h, i) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = `“${h.title}.”`;
+    b.addEventListener("click", () => loadExample(i));
+    const meta = document.createElement("span");
+    meta.className = "wire-meta";
+    meta.textContent = h.sub;
+    li.appendChild(b);
+    li.appendChild(meta);
+    document.getElementById("wires").appendChild(li);
+  });
+
+  function fmtDate() {
+    const d = new Date();
+    return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  $("datestamp").textContent = fmtDate();
+
+  async function probe() {
+    try {
+      const j = await (await fetch(`${SIGNER}/identity`)).json();
+      window.SIGNER_ADDR = j.address;
+      $("status-strap").innerHTML = j.signerType === "kms" ? "<b>KMS</b> · off-device" : "<b>local</b> · fallback";
+      $("r-mode").textContent = j.mode;
+      $("r-type").textContent = j.signerType;
+      $("r-addr").textContent = j.address;
+      $("r-keyid").textContent = j.keyId;
+    } catch (e) {
+      $("status-strap").textContent = "wire down";
+    } finally {
+      loadExample(activeEx);
+    }
+  }
+
+  function setVerdict(state, word) {
+    $("verdict").className = "verdict " + state;
+    $("verdict-word").textContent = word;
+  }
+  function setChecks(steps) {
+    const items = $("checks").children;
+    if (!steps) {
+      [...items].forEach((li) => { li.className = ""; li.lastElementChild.textContent = "pending"; });
+      return;
+    }
+    steps.forEach((s, i) => {
+      if (!items[i]) return;
+      items[i].className = s.ok ? "ok" : "fail";
+      items[i].lastElementChild.textContent = s.ok ? "verified" : "FAILED";
+      items[i].lastElementChild.title = s.detail || "";
+    });
+  }
+
+  $("btn-sign").addEventListener("click", async () => {
+    const msg = $("msg").value.trim();
+    if (!msg) return;
+    setVerdict("pending", "DISPATCHING…");
+    $("verdict-byline").textContent = "transmitting via auth.spacecomputer.io";
+    setChecks(null);
+    $("stamp-slot").innerHTML = "";
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${SIGNER}/sign`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const att = await r.json();
+      if (!r.ok) throw new Error(att.error);
+      const dt = Math.round(performance.now() - t0);
+      last = att; count++;
+      $("r-count").textContent = count;
+      $("r-lat").textContent = dt + " ms";
+      $("raw").textContent = JSON.stringify(att, null, 2);
+      $("verdict-byline").textContent = `Filed at ${att.signedAt} · ${dt}ms round-trip`;
+      await verify(att);
+    } catch (e) {
+      setVerdict("fail", "WIRE FAILED");
+      $("verdict-byline").textContent = e.message;
+    }
+  });
+
+  $("btn-verify").addEventListener("click", () => last && verify(last));
+
+  async function verify(att) {
+    try {
+      const r = await fetch(VERIFIER, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(att),
+      });
+      const rep = await r.json();
+      setChecks(rep.steps);
+      if (rep.ok) {
+        setVerdict("ok", "VERIFIED");
+        $("stamp-slot").innerHTML = '<div class="stamp">Filed · Verified</div>';
+      } else {
+        setVerdict("fail", "REJECTED");
+        $("stamp-slot").innerHTML = '<div class="stamp" style="border-color:var(--red);">Returned · Sender</div>';
+      }
+    } catch (e) {
+      setVerdict("fail", "WIRE FAILED");
+    }
+  }
+
+  probe();
+</script>
+</body>
+</html>
