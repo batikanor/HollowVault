@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>HVLT&lt;GO&gt; · HOLLOW VAULT · AGENT OPS TERMINAL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #000000;
+    --panel: #0c0c0c;
+    --rule: #221b00;
+    --amber: #ff8c00;
+    --amber-dim: #b06200;
+    --yellow: #fff200;
+    --green: #6cff5b;
+    --red: #ff3b3b;
+    --cyan: #00d4ff;
+    --gray: #6e6e6e;
+    --text: #ffd278;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Mono", "JetBrains Mono", "VT323", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.3;
+    min-height: 100vh;
+  }
+  /* CRT scanlines */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,140,0,0.02) 0 1px, transparent 1px 3px);
+    z-index: 100;
+  }
+  .ticker {
+    background: var(--amber); color: black;
+    padding: 4px 0;
+    font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
+    overflow: hidden;
+    border-bottom: 1px solid var(--amber-dim);
+  }
+  .ticker .scroll { display: inline-block; padding-left: 100%; animation: scroll 60s linear infinite; white-space: nowrap; }
+  @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+  .topbar {
+    background: var(--panel);
+    border-bottom: 1px solid var(--amber-dim);
+    padding: 6px 12px;
+    display: flex; gap: 18px;
+    font-size: 11px;
+    align-items: center;
+  }
+  .topbar .logo { color: var(--amber); font-weight: 700; }
+  .topbar .ticker-code { color: var(--yellow); }
+  .topbar .spacer { flex: 1; }
+  .topbar span { color: var(--gray); }
+  .topbar b { color: var(--text); }
+  .topbar .live { color: var(--green); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 1px;
+    background: var(--amber-dim);
+    border-bottom: 1px solid var(--amber-dim);
+  }
+  .panel {
+    background: var(--panel);
+    padding: 10px 12px;
+    min-height: 180px;
+  }
+  .panel.span2 { grid-column: span 2; }
+  .panel.span3 { grid-column: span 3; }
+  .panel header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--amber-dim);
+    margin-bottom: 8px; padding-bottom: 4px;
+  }
+  .panel h2 { margin: 0; font-size: 11px; color: var(--amber); letter-spacing: 0.08em; }
+  .panel header .tag { color: var(--gray); font-size: 10px; }
+
+  .table { width: 100%; border-collapse: collapse; }
+  .table td, .table th {
+    padding: 3px 8px;
+    border-bottom: 1px dotted var(--amber-dim);
+    font-size: 11.5px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .table th { color: var(--gray); font-weight: 400; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; padding-bottom: 4px; }
+  .table td.k { color: var(--gray); width: 130px; }
+  .table td.v { color: var(--text); word-break: break-all; }
+  .table td.v.hex { color: var(--cyan); }
+  .table td.v.green { color: var(--green); }
+  .table td.v.amber { color: var(--amber); }
+
+  textarea {
+    background: black; color: var(--text);
+    border: 1px solid var(--amber-dim);
+    font: inherit; padding: 6px 8px;
+    width: 100%; resize: vertical;
+    min-height: 60px;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--amber); }
+
+  button {
+    background: var(--amber); color: black;
+    border: 0; padding: 6px 14px;
+    font: inherit; font-weight: 700; font-size: 11px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  button:hover { background: var(--yellow); }
+  button:disabled { opacity: 0.5; }
+  button.secondary { background: transparent; color: var(--amber); border: 1px solid var(--amber); }
+  button.secondary:hover { background: var(--amber); color: black; }
+
+  .log { font-size: 11px; height: 200px; overflow-y: auto; padding-right: 4px; }
+  .log .row { display: grid; grid-template-columns: 70px 50px 1fr; gap: 8px; padding: 1px 0; }
+  .log .ts { color: var(--gray); }
+  .log .lvl.OK { color: var(--green); }
+  .log .lvl.ERR { color: var(--red); }
+  .log .lvl.INFO { color: var(--cyan); }
+  .log .lvl.SIG { color: var(--amber); }
+
+  .status-line {
+    background: var(--amber); color: black;
+    padding: 4px 12px;
+    display: flex; justify-content: space-between;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .status-line .keys { display: flex; gap: 14px; }
+  .status-line .keys span b { color: black; padding: 0 4px; background: rgba(0,0,0,0.15); }
+
+  .chart {
+    margin-top: 6px;
+    height: 60px;
+    display: grid;
+    grid-template-columns: repeat(40, 1fr);
+    align-items: end;
+    gap: 1px;
+  }
+  .chart div {
+    background: var(--amber-dim);
+    width: 100%; min-height: 2px;
+    transition: height 0.4s ease;
+  }
+  .chart div.last { background: var(--yellow); }
+
+  .checks-grid { display: grid; gap: 4px; }
+  .checks-grid .row {
+    display: grid; grid-template-columns: 24px 1fr 70px;
+    gap: 8px; align-items: center;
+    padding: 4px 6px;
+    border: 1px solid var(--amber-dim);
+    font-size: 11px;
+  }
+  .checks-grid .row .marker { width: 16px; height: 16px; display: grid; place-items: center; border: 1px solid var(--amber-dim); }
+  .checks-grid .row.ok .marker { background: var(--green); color: black; border-color: var(--green); }
+  .checks-grid .row.fail .marker { background: var(--red); color: black; border-color: var(--red); }
+  .checks-grid .row .res { text-align: right; color: var(--gray); }
+  .checks-grid .row.ok .res { color: var(--green); }
+  .checks-grid .row.fail .res { color: var(--red); }
+
+  pre.raw { margin: 0; padding: 8px; background: black; border: 1px solid var(--amber-dim); font-size: 10.5px; max-height: 180px; overflow: auto; color: var(--gray); }
+  pre.raw .k { color: var(--cyan); }
+
+  details summary { cursor: pointer; color: var(--gray); font-size: 11px; }
+  details summary:hover { color: var(--amber); }
+  .preset-bar { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .preset-bar .pre {
+    background: transparent; color: var(--cyan);
+    border: 1px solid var(--amber-dim);
+    padding: 4px 10px;
+    font: inherit; font-size: 10.5px; letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  .preset-bar .pre:hover { background: var(--cyan); color: black; border-color: var(--cyan); }
+  .preset-bar .pre.active { background: var(--yellow); color: black; border-color: var(--yellow); }
+  .preset-blurb { color: var(--gray); font-size: 10.5px; padding: 6px 0 0; min-height: 14px; }
+
+  .section-divider {
+    background: var(--amber);
+    color: black;
+    padding: 6px 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px solid var(--amber-dim);
+    border-bottom: 1px solid var(--amber-dim);
+  }
+  .section-divider .badge {
+    background: black; color: var(--yellow);
+    padding: 2px 8px; font-size: 10px; letter-spacing: 0.1em;
+  }
+
+  .agent-list { list-style: none; margin: 0; padding: 0; max-height: 200px; overflow-y: auto; }
+  .agent-list li button {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--amber-dim);
+    color: var(--text);
+    text-align: left;
+    padding: 6px 8px; margin-bottom: 3px;
+    font: inherit; font-weight: 400; font-size: 11px; letter-spacing: 0;
+    cursor: pointer; text-transform: none;
+  }
+  .agent-list li button:hover { border-color: var(--cyan); }
+  .agent-list li button.selected { background: var(--amber); color: black; border-color: var(--amber); }
+  .agent-list li button .name { display: block; font-weight: 700; }
+  .agent-list li button .addr { display: block; font-size: 10px; color: var(--gray); }
+  .agent-list li button.selected .addr { color: rgba(0,0,0,0.7); }
+
+  .field { display: block; margin-bottom: 8px; }
+  .field label { display: block; font-size: 10px; color: var(--gray); letter-spacing: 0.1em; margin-bottom: 3px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 4px 6px;
+    background: black; color: var(--text);
+    border: 1px solid var(--amber-dim);
+    font: inherit; font-size: 11px;
+    outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--amber); }
+
+  .ledger-bar {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+    margin-top: 6px; font-size: 11px;
+  }
+  .ledger-bar .k { color: var(--gray); }
+  .ledger-bar .v { color: var(--cyan); }
+  .ledger-bar .v.warn { color: var(--yellow); }
+
+  .audit-log { font-size: 11px; max-height: 240px; overflow-y: auto; }
+  .audit-log .entry {
+    border-left: 2px solid var(--amber-dim);
+    padding: 4px 8px; margin-bottom: 4px;
+  }
+  .audit-log .entry.allow { border-left-color: var(--green); }
+  .audit-log .entry.deny { border-left-color: var(--red); }
+  .audit-log .entry .summary {
+    display: flex; justify-content: space-between; gap: 8px;
+    align-items: baseline;
+  }
+  .audit-log .entry .verdict { font-weight: 700; }
+  .audit-log .entry.allow .verdict { color: var(--green); }
+  .audit-log .entry.deny .verdict { color: var(--red); }
+  .audit-log .entry .rule { color: var(--gray); font-size: 10px; }
+  .audit-log .entry .desc { color: var(--text); margin-top: 2px; }
+  .audit-log .entry .reason { color: var(--red); font-size: 10px; margin-top: 2px; }
+  .audit-log .entry .meta { color: var(--gray); font-size: 10px; margin-top: 2px; }
+
+  .empty-hint {
+    color: var(--gray); font-size: 11px;
+    border: 1px dashed var(--amber-dim);
+    padding: 16px; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="ticker"><div class="scroll" id="ticker">
+  HVLT&lt;GO&gt; · HOLLOW VAULT TERMINAL · ORBITPORT KMS LIVE (off-device TEE) · cTRNG STREAM ACTIVE · SPACE KMS + ORBITPORT EXTERNAL PLUGIN · ETHPRAGUE 2026 · ALL TIMES UTC ·
+</div></div>
+
+<div class="topbar">
+  <span class="logo">HVLT&lt;GO&gt;</span>
+  <span>HOLLOW VAULT · <b>v1.0</b></span>
+  <span>SIGNER <b id="t-type">—</b></span>
+  <span>ADDR <b id="t-addr">—</b></span>
+  <span class="spacer"></span>
+  <span class="ticker-code">SESSION <b id="t-count">0</b></span>
+  <span>LAST <b id="t-lat">— ms</b></span>
+  <span class="live" id="t-conn">●</span>
+  <span id="t-clock">--:--:--</span>
+</div>
+
+<div class="main">
+
+  <section class="panel">
+    <header><h2>1) SIGNER DEVICE</h2><span class="tag">DEV/01</span></header>
+    <table class="table">
+      <tr><td class="k">Mode</td><td class="v amber" id="d-mode">—</td></tr>
+      <tr><td class="k">Signer Type</td><td class="v amber" id="d-type">—</td></tr>
+      <tr><td class="k">Address</td><td class="v hex" id="d-addr">—</td></tr>
+      <tr><td class="k">Public Key</td><td class="v hex" id="d-pub">—</td></tr>
+      <tr><td class="k">Key ID</td><td class="v" id="d-kid">—</td></tr>
+      <tr><td class="k">Created</td><td class="v" id="d-created">—</td></tr>
+      <tr><td class="k">Capabilities</td><td class="v amber" id="d-caps">—</td></tr>
+    </table>
+  </section>
+
+  <section class="panel">
+    <header><h2>2) THROUGHPUT</h2><span class="tag">PERF/01</span></header>
+    <table class="table">
+      <tr><td class="k">Sigs (session)</td><td class="v amber" id="p-sigs">0</td></tr>
+      <tr><td class="k">Verified</td><td class="v green" id="p-ver">0</td></tr>
+      <tr><td class="k">Failed</td><td class="v" id="p-fail">0</td></tr>
+      <tr><td class="k">Avg latency</td><td class="v amber" id="p-avg">— ms</td></tr>
+      <tr><td class="k">Last</td><td class="v amber" id="p-last">— ms</td></tr>
+    </table>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="panel">
+    <header><h2>3) cTRNG STREAM</h2><span class="tag">RNG/01</span></header>
+    <table class="table">
+      <tr><td class="k">Source</td><td class="v amber" id="r-source">—</td></tr>
+      <tr><td class="k">Latest seed</td><td class="v hex" id="r-seed">—</td></tr>
+      <tr><td class="k">Latest TS</td><td class="v" id="r-ts">—</td></tr>
+      <tr><td class="k">apiSrc tag</td><td class="v" id="r-apisrc">—</td></tr>
+    </table>
+  </section>
+
+  <section class="panel span2">
+    <header><h2>4) COMMAND LINE</h2><span class="tag">CMD/01</span></header>
+    <textarea id="msg" rows="9"></textarea>
+    <div class="preset-bar" id="presets"></div>
+    <div class="preset-blurb" id="preset-blurb">&nbsp;</div>
+    <div style="display:flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+      <button id="btn-sign">F1 ▸ SIGN</button>
+      <button class="secondary" id="btn-verify">F2 ▸ VERIFY LAST</button>
+      <button class="secondary" id="btn-batch">F3 ▸ BATCH×5</button>
+      <button class="secondary" id="btn-clear">F4 ▸ CLEAR LOG</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header><h2>5) VERIFY (5/5)</h2><span class="tag">VFY/01</span></header>
+    <div class="checks-grid" id="checks">
+      <div class="row"><span class="marker">·</span><span>MSG HASH</span><span class="res">PEND</span></div>
+      <div class="row"><span class="marker">·</span><span>SAT SIG</span><span class="res">PEND</span></div>
+      <div class="row"><span class="marker">·</span><span>BIND</span><span class="res">PEND</span></div>
+      <div class="row"><span class="marker">·</span><span>RECOVER</span><span class="res">PEND</span></div>
+      <div class="row"><span class="marker">·</span><span>FRESH</span><span class="res">PEND</span></div>
+    </div>
+  </section>
+
+  <section class="panel span2">
+    <header><h2>6) EVENT LOG</h2><span class="tag">LOG/01</span></header>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section class="panel">
+    <header><h2>7) RAW</h2><span class="tag">JSON/01</span></header>
+    <pre class="raw" id="raw">—</pre>
+  </section>
+
+</div>
+
+<div class="section-divider">
+  <span>AGENT OPS · hollowed wallets for AI agents</span>
+  <span class="badge" id="agent-count-badge">0 ROSTERED</span>
+</div>
+
+<div class="main">
+  <section class="panel">
+    <header><h2>A) ROSTER</h2><span class="tag">AGT/01</span></header>
+    <ul class="agent-list" id="agent-list">
+      <li><div class="empty-hint">No agents rostered. Use the form on the right to spawn one.</div></li>
+    </ul>
+    <div style="margin-top: 8px; font-size: 10px; color: var(--gray);">
+      Each agent gets a fresh KMS key. The operator never holds it.
+    </div>
+  </section>
+
+  <section class="panel">
+    <header><h2>B) SPAWN AGENT</h2><span class="tag">AGT/02</span></header>
+    <div class="field">
+      <label>name</label>
+      <input id="ag-name" value="Aria settlement bot" />
+    </div>
+    <div class="field">
+      <label>max per tx (ETH)</label>
+      <input id="ag-max-tx" value="0.5" />
+    </div>
+    <div class="field">
+      <label>max per day (ETH)</label>
+      <input id="ag-max-day" value="1.0" />
+    </div>
+    <div class="field">
+      <label>recipients (CSV; empty = no restriction)</label>
+      <input id="ag-recipients" value="0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" />
+    </div>
+    <div class="field">
+      <label>allowed actions (CSV)</label>
+      <input id="ag-actions" value="transfer" />
+    </div>
+    <button id="ag-spawn">▸ SPAWN AGENT IN KMS</button>
+    <div id="ag-spawn-status" style="margin-top:6px; font-size: 10.5px; color: var(--gray);">&nbsp;</div>
+  </section>
+
+  <section class="panel">
+    <header><h2>C) SELECTED · POLICY</h2><span class="tag">AGT/03</span></header>
+    <div id="ag-policy" class="empty-hint">No agent selected.</div>
+    <div class="ledger-bar" id="ag-ledger" style="display:none;">
+      <span class="k">spent today</span><span class="v" id="ag-spent">— ETH</span>
+      <span class="k">daily cap</span><span class="v" id="ag-cap-day">— ETH</span>
+      <span class="k">per-tx cap</span><span class="v" id="ag-cap-tx">— ETH</span>
+      <span class="k">key id</span><span class="v" id="ag-key">—</span>
+    </div>
+  </section>
+
+  <section class="panel span2">
+    <header><h2>D) SUBMIT INTENT</h2><span class="tag">AGT/04</span></header>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div class="field">
+        <label>kind</label>
+        <select id="in-kind">
+          <option value="transfer">transfer</option>
+          <option value="approve">approve</option>
+          <option value="arbitrary">arbitrary</option>
+        </select>
+      </div>
+      <div class="field" id="in-amount-wrap">
+        <label>amount (ETH)</label>
+        <input id="in-amount" value="0.3" />
+      </div>
+      <div class="field" id="in-to-wrap">
+        <label>recipient</label>
+        <input id="in-to" value="0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" />
+      </div>
+      <div class="field" id="in-contract-wrap" style="display:none;">
+        <label>contract</label>
+        <input id="in-contract" value="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" />
+      </div>
+      <div class="field" id="in-spender-wrap" style="display:none;">
+        <label>spender</label>
+        <input id="in-spender" value="0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" />
+      </div>
+      <div class="field" id="in-message-wrap" style="display:none; grid-column: span 2;">
+        <label>message</label>
+        <input id="in-message" value="Quarterly settlement attestation 2026-Q2" />
+      </div>
+    </div>
+    <button id="in-submit" disabled>▸ SUBMIT INTENT</button>
+    <span id="in-result" style="margin-left: 12px; font-size: 11px;"></span>
+  </section>
+
+  <section class="panel">
+    <header><h2>E) AUDIT (last 20)</h2><span class="tag">AGT/05</span></header>
+    <div id="ag-audit" class="audit-log">
+      <div class="empty-hint">No intents yet.</div>
+    </div>
+  </section>
+</div>
+
+<div class="status-line">
+  <div class="keys">
+    <span><b>F1</b> Sign</span>
+    <span><b>F2</b> Verify</span>
+    <span><b>F3</b> Batch</span>
+    <span><b>F4</b> Clear</span>
+    <span><b>F10</b> Spawn</span>
+    <span><b>F11</b> Intent</span>
+  </div>
+  <div>CONN <span id="s-conn">▲ LIVE</span> · HVLT TERMINAL · UTC <span id="s-clock">--:--:--</span></div>
+</div>
+
+<script src="examples.js"></script>
+<script src="setup-banner.js"></script>
+<script>window.hollowVaultMountSetupBanner && window.hollowVaultMountSetupBanner("http://localhost:8080");</script>
+<script>
+  const SIGNER = "http://localhost:8080";
+  const VERIFIER = "http://localhost:4747/api/verify";
+  const $ = (id) => document.getElementById(id);
+  const log = $("log"), checksEl = $("checks"), chartEl = $("chart");
+
+  let sigs = 0, ver = 0, fail = 0, lats = [], lastAtt = null, activeEx = 0;
+
+  function loadPreset(idx) {
+    activeEx = idx;
+    const ex = window.HOLLOW_VAULT_EXAMPLES[idx];
+    if (!ex) return;
+    $("msg").value = window.hollowVaultLoadExample(idx, window.SIGNER_ADDR);
+    $("preset-blurb").textContent = `▸ ${ex.title.toUpperCase()} · ${ex.blurb}`;
+    [...document.querySelectorAll(".preset-bar .pre")].forEach((b, i) =>
+      b.classList.toggle("active", i === idx),
+    );
+  }
+  window.HOLLOW_VAULT_EXAMPLES.forEach((ex, i) => {
+    const b = document.createElement("button");
+    b.className = "pre";
+    b.textContent = `F${i+5} ▸ ${ex.short.toUpperCase()}`;
+    b.title = ex.blurb;
+    b.addEventListener("click", () => loadPreset(i));
+    $("presets").appendChild(b);
+  });
+
+  // Init chart bars
+  for (let i = 0; i < 40; i++) chartEl.appendChild(document.createElement("div"));
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function clk() {
+    const d = new Date();
+    const t = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+    $("t-clock").textContent = t; $("s-clock").textContent = t;
+  }
+  setInterval(clk, 500); clk();
+
+  function addLog(lvl, msg) {
+    const d = new Date();
+    const ts = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+    const r = document.createElement("div");
+    r.className = "row";
+    r.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${lvl}">${lvl}</span><span></span>`;
+    r.lastElementChild.textContent = msg;
+    log.appendChild(r);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setCheck(idx, ok) {
+    const row = checksEl.children[idx];
+    row.className = "row" + (ok === null ? "" : ok ? " ok" : " fail");
+    row.querySelector(".marker").textContent = ok === null ? "·" : ok ? "✓" : "✗";
+    row.querySelector(".res").textContent = ok === null ? "PEND" : ok ? "PASS" : "FAIL";
+  }
+
+  function setStats(latMs) {
+    if (latMs != null) {
+      lats.push(latMs);
+      if (lats.length > 40) lats.shift();
+      const avg = Math.round(lats.reduce((a,b)=>a+b,0) / lats.length);
+      $("p-last").textContent = `${latMs} ms`;
+      $("p-avg").textContent = `${avg} ms`;
+      $("t-lat").textContent = `${latMs} ms`;
+      const max = Math.max(...lats, 1);
+      const bars = chartEl.children;
+      for (let i = 0; i < 40; i++) {
+        const idx = lats.length - 40 + i;
+        const v = idx >= 0 ? lats[idx] : 0;
+        bars[i].style.height = `${Math.max(2, (v / max) * 100)}%`;
+        bars[i].className = idx === lats.length - 1 ? "last" : "";
+      }
+    }
+    $("p-sigs").textContent = sigs;
+    $("p-ver").textContent = ver;
+    $("p-fail").textContent = fail;
+    $("t-count").textContent = sigs;
+  }
+
+  async function probe() {
+    try {
+      const j = await (await fetch(`${SIGNER}/identity`)).json();
+      window.SIGNER_ADDR = j.address;
+      $("d-mode").textContent = j.mode.toUpperCase();
+      $("d-type").textContent = j.signerType.toUpperCase();
+      $("d-addr").textContent = j.address;
+      $("d-pub").textContent = j.publicKey.slice(0, 22) + "…" + j.publicKey.slice(-12);
+      $("d-kid").textContent = j.keyId;
+      $("d-created").textContent = j.createdAt;
+      $("d-caps").textContent = j.capabilities.join(" · ");
+      $("t-type").textContent = j.signerType.toUpperCase();
+      $("t-addr").textContent = j.address.slice(0, 10) + "…" + j.address.slice(-6);
+      $("t-conn").textContent = "● LIVE";
+      $("s-conn").textContent = "▲ LIVE";
+      addLog("OK", `device handshake → ${j.address} (${j.signerType.toUpperCase()})`);
+    } catch (e) {
+      $("t-conn").textContent = "● DOWN";
+      $("s-conn").textContent = "▼ DOWN";
+      addLog("ERR", `probe failed: ${e}`);
+    } finally {
+      loadPreset(activeEx);
+    }
+  }
+
+  async function doSign() {
+    const msg = $("msg").value.trim();
+    if (!msg) return;
+    addLog("INFO", `sign request: ${msg.slice(0,50)}${msg.length>50?'…':''}`);
+    $("btn-sign").disabled = true;
+    [...checksEl.children].forEach((_, i) => setCheck(i, null));
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${SIGNER}/sign`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const att = await r.json();
+      if (!r.ok) throw new Error(att.error);
+      const dt = Math.round(performance.now() - t0);
+      sigs++; lastAtt = att;
+      $("r-source").textContent = att.cosmic.source.toUpperCase();
+      $("r-seed").textContent = "0x" + att.cosmic.seed.slice(0,16) + "…" + att.cosmic.seed.slice(-6);
+      $("r-ts").textContent = att.cosmic.timestamp;
+      $("r-apisrc").textContent = att.cosmic.apiSrc || "—";
+      $("raw").textContent = JSON.stringify(att, null, 2);
+      addLog("SIG", `sigId=${(att.payloadHash || "").slice(0,12)} sig=${att.signature.slice(0,16)}… ${dt}ms`);
+      setStats(dt);
+      await verify(att);
+    } catch (e) {
+      fail++; setStats();
+      addLog("ERR", `sign failed: ${e.message}`);
+    } finally {
+      $("btn-sign").disabled = false;
+    }
+  }
+
+  async function verify(att) {
+    addLog("INFO", "verifying attestation…");
+    try {
+      const r = await fetch(VERIFIER, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(att),
+      });
+      const rep = await r.json();
+      rep.steps.forEach((s, i) => setCheck(i, s.ok));
+      if (rep.ok) { ver++; addLog("OK", `5/5 PASS · recovered ${rep.signerAddress}`); }
+      else { fail++; addLog("ERR", "verify FAIL: " + rep.steps.filter(s=>!s.ok).map(s=>s.label).join("; ")); }
+      setStats();
+    } catch (e) { addLog("ERR", `verify error: ${e.message}`); }
+  }
+
+  async function doBatch() {
+    addLog("INFO", "batch×5 dispatching…");
+    try {
+      const r = await fetch(`${SIGNER}/sign-batch`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: Array.from({length:5}, (_,i) => `BATCH_TX ${i+1} @ ${new Date().toISOString()}`) }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      sigs += j.attestations.length;
+      setStats();
+      addLog("OK", `batch ok · ${j.attestations.length} sigs · batchId=${j.batchId.slice(0,18)}…`);
+    } catch (e) { addLog("ERR", `batch fail: ${e.message}`); }
+  }
+
+  $("btn-sign").addEventListener("click", doSign);
+  $("btn-verify").addEventListener("click", () => lastAtt && verify(lastAtt));
+  $("btn-batch").addEventListener("click", doBatch);
+  $("btn-clear").addEventListener("click", () => { log.innerHTML = ""; addLog("INFO", "log cleared"); });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F1") { e.preventDefault(); doSign(); }
+    else if (e.key === "F2") { e.preventDefault(); lastAtt && verify(lastAtt); }
+    else if (e.key === "F3") { e.preventDefault(); doBatch(); }
+    else if (e.key === "F4") { e.preventDefault(); log.innerHTML = ""; }
+    else if (e.key === "F5") { e.preventDefault(); loadPreset(0); }
+    else if (e.key === "F6") { e.preventDefault(); loadPreset(1); }
+    else if (e.key === "F7") { e.preventDefault(); loadPreset(2); }
+    else if (e.key === "F8") { e.preventDefault(); loadPreset(3); }
+    else if (e.key === "F9") { e.preventDefault(); loadPreset(4); }
+    else if (e.key === "F10") { e.preventDefault(); spawnAgent(); }
+    else if (e.key === "F11") { e.preventDefault(); submitIntent(); }
+  });
+
+  const ETH_DECIMALS = 18n;
+  const TEN = 10n;
+  const POW18 = TEN ** ETH_DECIMALS;
+
+  function ethToWei(eth) {
+    const cleaned = String(eth).trim();
+    if (!/^\d+(\.\d+)?$/.test(cleaned)) throw new Error("invalid ETH amount: " + eth);
+    const [whole, frac = ""] = cleaned.split(".");
+    const fracPadded = (frac + "0".repeat(18)).slice(0, 18);
+    return (BigInt(whole || "0") * POW18 + BigInt(fracPadded || "0")).toString();
+  }
+  function weiToEth(wei) {
+    const value = BigInt(wei);
+    const whole = value / POW18;
+    const remainder = value % POW18;
+    if (remainder === 0n) return whole.toString();
+    const fracStr = remainder.toString().padStart(18, "0").replace(/0+$/, "");
+    return `${whole}.${fracStr}`;
+  }
+  function shortAddr(value, head = 6, tail = 4) {
+    return value.length > head + tail + 1 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
+  }
+
+  let agents = [];
+  let selectedAgentId = null;
+
+  async function refreshAgents() {
+    const r = await fetch(`${SIGNER}/agents`);
+    const j = await r.json();
+    agents = j.agents || [];
+    $("agent-count-badge").textContent = `${agents.length} ROSTERED`;
+    renderAgentList();
+    if (agents.length > 0 && !agents.some((a) => a.agentId === selectedAgentId)) {
+      selectAgent(agents[0].agentId);
+    }
+    if (selectedAgentId) refreshSelectedAgent();
+  }
+
+  function renderAgentList() {
+    const list = $("agent-list");
+    list.innerHTML = "";
+    if (agents.length === 0) {
+      list.innerHTML = '<li><div class="empty-hint">No agents rostered. Use the form on the right to spawn one.</div></li>';
+      return;
+    }
+    for (const agent of agents) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.className = agent.agentId === selectedAgentId ? "selected" : "";
+      btn.innerHTML = `<span class="name"></span><span class="addr"></span>`;
+      btn.querySelector(".name").textContent = agent.name;
+      btn.querySelector(".addr").textContent = shortAddr(agent.address, 8, 6);
+      btn.addEventListener("click", () => selectAgent(agent.agentId));
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+  }
+
+  function selectAgent(agentId) {
+    selectedAgentId = agentId;
+    renderAgentList();
+    refreshSelectedAgent();
+    $("in-submit").disabled = false;
+  }
+
+  async function refreshSelectedAgent() {
+    if (!selectedAgentId) return;
+    const agent = agents.find((a) => a.agentId === selectedAgentId);
+    if (!agent) return;
+    const r = await fetch(`${SIGNER}/agents/${selectedAgentId}/log`);
+    const j = await r.json();
+    const policyEl = $("ag-policy");
+    policyEl.className = "";
+    policyEl.innerHTML =
+      `<div style="font-size: 12px; color: var(--text); margin-bottom: 6px;">${agent.name}</div>` +
+      `<div style="font-size: 10px; color: var(--gray);">addr ${agent.address}</div>` +
+      `<div style="margin-top:6px; font-size: 11px;">actions: <span style="color: var(--cyan);">${agent.policy.allowedActions.join(" · ")}</span></div>` +
+      `<div style="font-size: 11px;">recipient allow-list: <span style="color: var(--cyan);">${agent.policy.allowedRecipients.length === 0 ? "open" : agent.policy.allowedRecipients.length + " entries"}</span></div>`;
+    $("ag-ledger").style.display = "grid";
+    const spentEth = weiToEth(j.spentTodayWei);
+    const dayCapEth = weiToEth(agent.policy.maxPerDayWei);
+    const txCapEth = weiToEth(agent.policy.maxPerTxWei);
+    $("ag-spent").textContent = `${spentEth} ETH`;
+    $("ag-spent").className = BigInt(j.spentTodayWei) >= BigInt(agent.policy.maxPerDayWei) * 9n / 10n ? "v warn" : "v";
+    $("ag-cap-day").textContent = `${dayCapEth} ETH`;
+    $("ag-cap-tx").textContent = `${txCapEth} ETH`;
+    $("ag-key").textContent = agent.kmsKeyId;
+    renderAuditLog(j.entries || []);
+  }
+
+  function renderAuditLog(entries) {
+    const el = $("ag-audit");
+    if (entries.length === 0) {
+      el.innerHTML = '<div class="empty-hint">No intents yet.</div>';
+      return;
+    }
+    const recent = entries.slice(-20).reverse();
+    el.innerHTML = "";
+    for (const entry of recent) {
+      const div = document.createElement("div");
+      div.className = `entry ${entry.decision.allow ? "allow" : "deny"}`;
+      const intent = entry.intent;
+      const desc = intent.kind === "transfer"
+        ? `transfer ${weiToEth(intent.amountWei)} ETH → ${shortAddr(intent.to, 8, 6)}`
+        : intent.kind === "approve"
+          ? `approve ${weiToEth(intent.amountWei)} of ${shortAddr(intent.contract, 8, 6)}`
+          : `arbitrary: ${intent.message.slice(0, 60)}${intent.message.length > 60 ? "…" : ""}`;
+      const sig = entry.attestation
+        ? `<div class="meta">sig ${entry.attestation.signature.slice(0,18)}… · cosmic ${entry.attestation.cosmic.source}</div>`
+        : "";
+      const reason = !entry.decision.allow
+        ? `<div class="reason">${entry.decision.reason}</div>`
+        : "";
+      div.innerHTML =
+        `<div class="summary"><span class="verdict">${entry.decision.allow ? "✓ ALLOW" : "✗ DENY"}</span><span class="rule">${entry.decision.ruleId}</span></div>` +
+        `<div class="desc">${desc}</div>` +
+        reason +
+        sig +
+        `<div class="meta">${entry.loggedAt}</div>`;
+      el.appendChild(div);
+    }
+  }
+
+  async function spawnAgent() {
+    const name = $("ag-name").value.trim();
+    if (!name) return;
+    let policy;
+    try {
+      policy = {
+        version: 1,
+        maxPerTxWei: ethToWei($("ag-max-tx").value),
+        maxPerDayWei: ethToWei($("ag-max-day").value),
+        allowedActions: $("ag-actions").value.split(",").map((s) => s.trim()).filter(Boolean),
+        allowedRecipients: $("ag-recipients").value.split(",").map((s) => s.trim()).filter(Boolean),
+        allowedContracts: [],
+      };
+    } catch (e) {
+      $("ag-spawn-status").textContent = "form error: " + e.message;
+      $("ag-spawn-status").style.color = "var(--red)";
+      return;
+    }
+    $("ag-spawn-status").textContent = "minting KMS key…";
+    $("ag-spawn-status").style.color = "var(--cyan)";
+    $("ag-spawn").disabled = true;
+    try {
+      const r = await fetch(`${SIGNER}/agents`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, policy }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || j.error || "spawn failed");
+      $("ag-spawn-status").textContent = `✓ ${j.address} · key ${j.kmsKeyId}`;
+      $("ag-spawn-status").style.color = "var(--green)";
+      addLog("OK", `agent spawned · ${name} · ${j.address}`);
+      await refreshAgents();
+      selectAgent(j.agentId);
+    } catch (e) {
+      $("ag-spawn-status").textContent = "✗ " + e.message;
+      $("ag-spawn-status").style.color = "var(--red)";
+    } finally {
+      $("ag-spawn").disabled = false;
+    }
+  }
+
+  function buildIntent() {
+    const kind = $("in-kind").value;
+    if (kind === "transfer") {
+      return { kind: "transfer", to: $("in-to").value.trim(), amountWei: ethToWei($("in-amount").value) };
+    }
+    if (kind === "approve") {
+      return {
+        kind: "approve",
+        contract: $("in-contract").value.trim(),
+        spender: $("in-spender").value.trim(),
+        amountWei: ethToWei($("in-amount").value),
+      };
+    }
+    return { kind: "arbitrary", message: $("in-message").value };
+  }
+
+  async function submitIntent() {
+    if (!selectedAgentId) {
+      $("in-result").textContent = "select an agent first";
+      $("in-result").style.color = "var(--red)";
+      return;
+    }
+    let intent;
+    try { intent = buildIntent(); }
+    catch (e) {
+      $("in-result").textContent = "form error: " + e.message;
+      $("in-result").style.color = "var(--red)";
+      return;
+    }
+    $("in-submit").disabled = true;
+    try {
+      const r = await fetch(`${SIGNER}/agents/${selectedAgentId}/intent`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(intent),
+      });
+      const j = await r.json();
+      if (r.ok) {
+        $("in-result").textContent = `✓ ALLOW · ${j.attestation.signature.slice(0, 22)}…`;
+        $("in-result").style.color = "var(--green)";
+        addLog("SIG", `agent intent signed · rule=${j.decision.ruleId}`);
+      } else {
+        $("in-result").textContent = `✗ DENY · ${j.reason || j.error}`;
+        $("in-result").style.color = "var(--red)";
+        addLog("ERR", `agent intent denied · rule=${j.decision?.ruleId}`);
+      }
+      await refreshSelectedAgent();
+    } catch (e) {
+      $("in-result").textContent = "✗ " + e.message;
+      $("in-result").style.color = "var(--red)";
+    } finally {
+      $("in-submit").disabled = false;
+    }
+  }
+
+  function syncIntentFields() {
+    const kind = $("in-kind").value;
+    $("in-amount-wrap").style.display = kind === "arbitrary" ? "none" : "";
+    $("in-to-wrap").style.display = kind === "transfer" ? "" : "none";
+    $("in-contract-wrap").style.display = kind === "approve" ? "" : "none";
+    $("in-spender-wrap").style.display = kind === "approve" ? "" : "none";
+    $("in-message-wrap").style.display = kind === "arbitrary" ? "" : "none";
+  }
+  $("in-kind").addEventListener("change", syncIntentFields);
+  $("ag-spawn").addEventListener("click", spawnAgent);
+  $("in-submit").addEventListener("click", submitIntent);
+
+  syncIntentFields();
+  refreshAgents().catch((e) => addLog("ERR", `agents load failed: ${e}`));
+
+  probe();
+  setStats();
+</script>
+</body>
+</html>
