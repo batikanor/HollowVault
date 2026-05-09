@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hollow Vault · Liquid Glass</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ink: #1f2230;
+    --ink-soft: #5a5e72;
+    --hairline: rgba(31, 34, 48, 0.08);
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-strong: rgba(255, 255, 255, 0.78);
+    --accent: #6a5ae0;
+    --green: #1aa37a;
+    --rose: #e95d8d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    color: var(--ink);
+    font-family: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at 12% 18%, #ffd7c2 0%, transparent 35%),
+      radial-gradient(ellipse at 90% 28%, #c8b6ff 0%, transparent 40%),
+      radial-gradient(ellipse at 80% 88%, #a4f3d4 0%, transparent 38%),
+      radial-gradient(ellipse at 8% 90%, #ffe7a3 0%, transparent 45%),
+      linear-gradient(180deg, #fdf7f1 0%, #f0eaff 100%);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: ""; position: fixed; inset: -10%;
+    background: inherit;
+    filter: blur(60px);
+    z-index: -1;
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    0%   { transform: translate(0,0) scale(1); }
+    100% { transform: translate(-3%,-2%) scale(1.04); }
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 56px 28px 96px; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; }
+  .logo { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 18px; letter-spacing: -0.01em; }
+  .logo .dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #ffd7c2, #c8b6ff 50%, #a4f3d4);
+    box-shadow: 0 4px 16px rgba(106, 90, 224, 0.25), inset 0 0 0 1px rgba(255,255,255,0.6);
+  }
+  .pill {
+    padding: 6px 14px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.65);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500;
+    color: var(--ink-soft);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .pill.live { color: var(--green); }
+  .pill.kms { color: var(--accent); }
+
+  h1 {
+    font-size: clamp(40px, 6.5vw, 72px);
+    font-weight: 200;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    margin: 0 0 20px;
+    max-width: 900px;
+  }
+  h1 em { font-style: normal; font-weight: 500; background: linear-gradient(135deg, #6a5ae0, #e95d8d 60%, #1aa37a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: 18px; color: var(--ink-soft); max-width: 56ch; font-weight: 300; margin: 0 0 56px; }
+
+  .card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 28px;
+    padding: 28px 30px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 8px 24px -8px rgba(31, 34, 48, 0.12),
+      0 24px 48px -16px rgba(31, 34, 48, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 12px 32px -8px rgba(31, 34, 48, 0.16), 0 32px 64px -16px rgba(31, 34, 48, 0.08); }
+  .card.compact { padding: 18px 22px; }
+
+  .composer { display: flex; flex-direction: column; gap: 18px; }
+  textarea {
+    border: none;
+    background: var(--glass-strong);
+    border-radius: 18px;
+    padding: 18px 22px;
+    font: inherit; font-weight: 400;
+    font-size: 17px; color: var(--ink);
+    min-height: 110px; resize: vertical;
+    outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 1px rgba(31, 34, 48, 0.04);
+    transition: box-shadow 0.18s;
+  }
+  textarea:focus { box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 0 0 2px var(--accent); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  button {
+    border: none;
+    background: var(--ink);
+    color: white;
+    font: inherit; font-weight: 500;
+    font-size: 15px;
+    padding: 13px 24px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(31, 34, 48, 0.18);
+    transition: transform 0.12s ease, box-shadow 0.18s, background 0.15s;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(31, 34, 48, 0.22); background: var(--accent); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  button.ghost {
+    background: var(--glass-strong);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px rgba(31, 34, 48, 0.08);
+  }
+  button.ghost:hover { background: white; color: var(--accent); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
+  .meta dt { color: var(--ink-soft); font-weight: 400; }
+  .meta dd { margin: 0; font-weight: 500; word-break: break-all; font-feature-settings: "tnum"; }
+
+  .checks { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .check {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: var(--glass-strong);
+    border-radius: 14px;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  .check .icon {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(31, 34, 48, 0.08);
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  }
+  .check.ok { background: rgba(26, 163, 122, 0.12); }
+  .check.ok .icon { background: var(--green); color: white; }
+  .check.fail { background: rgba(233, 93, 141, 0.12); }
+  .check.fail .icon { background: var(--rose); color: white; }
+  .check small { display:block; color: var(--ink-soft); font-size: 12px; margin-top: 2px; word-break: break-all; }
+
+  .stat-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .stat-pills .stat {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.65);
+    border-radius: 16px;
+    padding: 10px 16px;
+    min-width: 120px;
+  }
+  .stat-pills label { font-size: 11px; color: var(--ink-soft); }
+  .stat-pills b { display: block; font-size: 18px; font-weight: 500; margin-top: 2px; }
+
+  details summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); padding: 8px 0; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "›"; display: inline-block; width: 16px; transition: transform 0.15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  pre {
+    margin: 0; padding: 14px 16px;
+    background: rgba(31, 34, 48, 0.06);
+    border-radius: 12px;
+    font-family: "SF Mono", ui-monospace, monospace;
+    font-size: 12px;
+    overflow: auto;
+    max-height: 240px;
+  }
+
+  footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--ink-soft); }
+
+  /* Pill chips for example presets */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip {
+    background: var(--glass-strong);
+    border: 1px solid rgba(31, 34, 48, 0.06);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--ink); cursor: pointer;
+    transition: transform 0.12s, background 0.18s, color 0.18s;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset;
+  }
+  .chip:hover { background: white; transform: translateY(-1px); color: var(--accent); }
+  .chip.active {
+    background: var(--ink); color: white;
+    box-shadow: 0 4px 14px rgba(31, 34, 48, 0.25);
+  }
+  .chip .emoji { margin-right: 5px; }
+  .chip-blurb { font-size: 12px; color: var(--ink-soft); margin-top: -6px; padding: 0 4px 8px; min-height: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo"><span class="dot"></span><span>Hollow Vault</span></div>
+    <span class="pill" id="status-pill">probing…</span>
+  </header>
+
+  <h1>Sign with a key that <em>has never existed</em> on your laptop.</h1>
+  <p class="lede">The key was created inside SpaceComputer's Orbitport KMS — held in a Trusted Execution Environment off this device, with on-orbit hardware on their Q4 2026 roadmap — and signs there. Each signature carries a fresh satellite-attested cosmic-randomness draw, and the key never crosses the trust boundary back to you.</p>
+
+  <section class="card">
+    <div class="composer">
+      <div class="chip-row" id="chips"></div>
+      <div class="chip-blurb" id="chip-blurb">&nbsp;</div>
+      <textarea id="msg" rows="11" placeholder="Pick an example above, or type your own…"></textarea>
+      <div class="row">
+        <div class="meta" style="font-size: 12px;">
+          <dt>Wallet</dt><dd id="m-addr">—</dd>
+          <dt>Backed by</dt><dd id="m-by">—</dd>
+        </div>
+        <div style="display:flex; gap: 10px;">
+          <button class="ghost" id="btn-verify">Verify last</button>
+          <button id="btn-sign">Sign with KMS →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-2">
+
+    <section class="card">
+      <h3 style="margin: 0 0 8px; font-weight: 500; font-size: 17px;">Latest attestation</h3>
+      <div class="meta" id="att-meta">
+        <dt>signature</dt><dd id="a-sig">—</dd>
+        <dt>cosmic seed</dt><dd id="a-seed">—</dd>
+        <dt>payload hash</dt><dd id="a-payload">—</dd>
+        <dt>recovery id</dt><dd id="a-rec">—</dd>
+        <dt>signed at</dt><dd id="a-ts">—</dd>
+      </div>
+      <details style="margin-top:14px;">
+        <summary>Raw envelope</summary>
+        <pre id="raw">—</pre>
+      </details>
+    </section>
+
+    <section class="card">
+      <h3 style="margin: 0 0 8px; font-weight: 500; font-size: 17px;">Five offline checks</h3>
+      <div class="checks" id="checks">
+        <div class="check"><span class="icon">·</span><div>Message hash<small>pending</small></div></div>
+        <div class="check"><span class="icon">·</span><div>Satellite signature<small>pending</small></div></div>
+        <div class="check"><span class="icon">·</span><div>Cosmic ↔ message binding<small>pending</small></div></div>
+        <div class="check"><span class="icon">·</span><div>ECDSA recovery<small>pending</small></div></div>
+        <div class="check"><span class="icon">·</span><div>Cosmic timestamp freshness<small>pending</small></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="stat-pills">
+    <div class="stat"><label>Mode</label><b id="s-mode">—</b></div>
+    <div class="stat"><label>Signer type</label><b id="s-type">—</b></div>
+    <div class="stat"><label>Last latency</label><b id="s-lat">—</b></div>
+    <div class="stat"><label>Sigs this session</label><b id="s-count">0</b></div>
+  </div>
+
+  <footer>hollow-vault · ETHPrague 2026 · Liquid Glass UI</footer>
+</main>
+
+<script src="examples.js"></script>
+<script src="setup-banner.js"></script>
+<script>window.hollowVaultMountSetupBanner && window.hollowVaultMountSetupBanner("http://localhost:8080");</script>
+<script>
+  const SIGNER = "http://localhost:8080";
+  const VERIFIER = "http://localhost:4747/api/verify";
+  const $ = (id) => document.getElementById(id);
+  let last = null, count = 0, activeEx = 0;
+
+  const EMOJIS = { siwe: "🔑", vote: "🗳", bid: "🤐", predict: "🔮", disclose: "📂" };
+
+  function loadExample(idx) {
+    activeEx = idx;
+    const ex = window.HOLLOW_VAULT_EXAMPLES[idx];
+    if (!ex) return;
+    $("msg").value = window.hollowVaultLoadExample(idx, window.SIGNER_ADDR);
+    $("chip-blurb").textContent = ex.blurb;
+    [...document.querySelectorAll(".chip")].forEach((c, i) =>
+      c.classList.toggle("active", i === idx),
+    );
+  }
+
+  window.HOLLOW_VAULT_EXAMPLES.forEach((ex, i) => {
+    const c = document.createElement("button");
+    c.type = "button";
+    c.className = "chip";
+    c.innerHTML = `<span class="emoji">${EMOJIS[ex.id] || "✦"}</span>${ex.short}`;
+    c.title = ex.blurb;
+    c.addEventListener("click", () => loadExample(i));
+    $("chips").appendChild(c);
+  });
+
+  function shorten(h, head=10, tail=6) { return h && h.length > head+tail+1 ? h.slice(0, head) + "…" + h.slice(-tail) : h; }
+
+  async function probe() {
+    try {
+      const j = await (await fetch(`${SIGNER}/identity`)).json();
+      window.SIGNER_ADDR = j.address;
+      $("status-pill").textContent = j.mode === "real" ? "Live · Orbitport KMS" : "Mock";
+      $("status-pill").className = "pill " + (j.signerType === "kms" ? "kms" : "live");
+      $("m-addr").textContent = j.address;
+      $("m-by").textContent = j.signerType === "kms" ? "Orbitport KMS" : "Local fallback";
+      $("s-mode").textContent = j.mode;
+      $("s-type").textContent = j.signerType;
+    } catch (e) {
+      $("status-pill").textContent = "Offline";
+    } finally {
+      loadExample(activeEx);
+    }
+  }
+
+  function setCheck(idx, ok, detail) {
+    const c = $("checks").children[idx];
+    if (!c) return;
+    c.className = "check " + (ok === null ? "" : ok ? "ok" : "fail");
+    c.querySelector(".icon").textContent = ok === null ? "·" : ok ? "✓" : "✗";
+    c.querySelector("small").textContent = ok === null ? "pending" : detail || "";
+  }
+
+  $("btn-sign").addEventListener("click", async () => {
+    const msg = $("msg").value.trim();
+    if (!msg) return;
+    $("btn-sign").disabled = true;
+    [...$("checks").children].forEach((_, i) => setCheck(i, null));
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${SIGNER}/sign`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const att = await r.json();
+      if (!r.ok) throw new Error(att.error);
+      const dt = Math.round(performance.now() - t0);
+      last = att; count++;
+      $("a-sig").textContent = shorten(att.signature, 18, 8);
+      $("a-seed").textContent = "0x" + shorten(att.cosmic.seed, 14, 8);
+      $("a-payload").textContent = shorten(att.payloadHash, 18, 8);
+      $("a-rec").textContent = att.recoveryId;
+      $("a-ts").textContent = att.signedAt;
+      $("raw").textContent = JSON.stringify(att, null, 2);
+      $("s-lat").textContent = dt + " ms";
+      $("s-count").textContent = count;
+      await verify(att);
+    } catch (e) {
+      alert("Sign failed: " + e.message);
+    } finally {
+      $("btn-sign").disabled = false;
+    }
+  });
+
+  $("btn-verify").addEventListener("click", () => last && verify(last));
+
+  async function verify(att) {
+    try {
+      const r = await fetch(VERIFIER, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(att),
+      });
+      const rep = await r.json();
+      rep.steps.forEach((s, i) => setCheck(i, s.ok, s.detail));
+    } catch (e) { console.error(e); }
+  }
+
+  probe();
+</script>
+</body>
+</html>
