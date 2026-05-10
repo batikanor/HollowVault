@@ -4,24 +4,30 @@
  * (localStorage-gated) and is re-triggerable from the TUTORIAL button
  * in the topbar.
  *
+ * Interaction model — the page is INTERACTIVE during the tour:
+ * - The spotlight cuts a hole in the dim layer (it has pointer-events:none
+ *   and uses a 9999px outward box-shadow to dim everything else). Clicks
+ *   inside the spotlit area pass through to the actual UI element below.
+ * - There is NO modal mask blocking page clicks — the user can scroll the
+ *   page, click the spotlit element directly, or click the tour's CTA
+ *   button. The tour stays open until they hit Skip / Done / Esc.
+ * - For action steps (advanceOnClick: true), if the user clicks the
+ *   spotlit element themselves we auto-advance (after a short delay so
+ *   the underlying click fires and any waitFor can poll for completion).
+ *
  * Design rules learned the hard way:
  * - Title text never includes a step number — the counter "X / 8" in the
- *   footer is the single source of truth (avoids 1-vs-2-indexed confusion).
- * - scrollIntoView is fire-and-forget but `getBoundingClientRect()` reads
- *   the live position. We MUST wait for the smooth-scroll to settle before
- *   placing the spotlight, otherwise the rect we captured pre-scroll
- *   points at the *previous* y-offset and the spotlight lands on the wrong
- *   element. Solution: scrollIntoView with behavior:"auto" (instant), then
- *   measure. The CSS transition on #hv-tour-spotlight handles the visual
- *   smoothness.
+ *   footer is the single source of truth.
+ * - scrollIntoView({behavior:"auto"}) so getBoundingClientRect() reads
+ *   the post-scroll position; CSS transitions on the spotlight are off
+ *   so probe-based tests don't read mid-animation rects.
  *
  * Public API:
- *   window.HOLLOW_VAULT_TOUR_START()  — open the tour
- *   window.HOLLOW_VAULT_TOUR_NEXT()   — advance / run onNext / wait waitFor
- *   window.HOLLOW_VAULT_TOUR_CLOSE()  — dismiss
- *   window.HOLLOW_VAULT_TOUR_PROBE()  — test-only helper, returns
- *                                       {stepIndex, target, spotlightRect,
- *                                        targetRect, overlapPct}
+ *   HOLLOW_VAULT_TOUR_START()  — open the tour
+ *   HOLLOW_VAULT_TOUR_NEXT()   — advance via tour CTA (runs onNext)
+ *   HOLLOW_VAULT_TOUR_CLOSE()  — dismiss
+ *   HOLLOW_VAULT_TOUR_PROBE()  — test-only: returns positioning data
+ *   HOLLOW_VAULT_TOUR_STEP_COUNT — number of steps
  */
 (function () {
   const SOURCE_PRESET_INDEX = 4;
@@ -38,6 +44,8 @@
         This 30-second tour walks the headline scenario: signing a journalist's
         priority-of-disclosure receipt, bound to a satellite-attested
         cosmic-randomness draw at this exact moment.
+        <br><br>
+        <span style="color:#6e6e6e">Tip · the page stays interactive — you can click any highlighted element yourself, or use the tour's CTA. Esc closes.</span>
       `,
       cta: "▶ Begin tour",
     },
@@ -47,11 +55,13 @@
       placement: "bottom",
       title: "Pick a real-world scenario",
       body: `
-        Five concrete Web3 signing patterns. We'll use <b>Source disclosure</b> —
-        the most compelling case for an off-device signer (the writer can't be
-        coerced to produce a key they don't have).
+        Five concrete Web3 signing patterns. <b>Click any preset</b> to
+        choose your own — or hit <b>Next ▸</b> to use the demo's pick:
+        <i>Source disclosure</i>, the most compelling case for an off-device
+        signer (the writer can't be coerced to produce a key they don't have).
       `,
-      cta: "Next ▸ select preset",
+      cta: "Next ▸ pick Source disclosure",
+      advanceOnClick: true,
       onNext: () => {
         const buttons = document.querySelectorAll(".preset-bar .pre");
         if (buttons[SOURCE_PRESET_INDEX]) buttons[SOURCE_PRESET_INDEX].click();
@@ -65,7 +75,8 @@
       body: `
         The page already fetched <code>/api/identity</code> at load and
         interpolated the gateway's wallet address into the template. Edit
-        anything — the signature commits to whatever ends up in this box.
+        anything you like — the signature commits to whatever ends up in
+        this box.
       `,
       cta: "Next ▸",
     },
@@ -75,7 +86,8 @@
       placement: "top",
       title: "Sign it",
       body: `
-        Clicking <b>F1 ▸ SIGN</b> kicks off three round-trips:
+        <b>Click F1 ▸ SIGN yourself</b>, or hit ▶ Sign now. Either way,
+        three round-trips fire:
         <ol style="margin: 8px 0; padding-left: 18px;">
           <li>fetch a 32-byte cosmic seed from Orbitport's cTRNG</li>
           <li>keccak256(scheme &Vert; seed &Vert; ts &Vert; messageHash) → payloadHash</li>
@@ -83,6 +95,7 @@
         </ol>
       `,
       cta: "▶ Sign now",
+      advanceOnClick: true,
       onNext: () => document.getElementById("btn-sign")?.click(),
       waitFor: () => {
         const raw = document.getElementById("raw");
@@ -109,11 +122,13 @@
       placement: "top",
       title: "Run the 5-check verifier",
       body: `
-        The same library code runs in <code>HollowVaultVerifier.sol</code>
-        on-chain (~31k gas via <code>ecrecover</code>). Five independent
-        checks that all have to pass.
+        <b>Click F2 ▸ VERIFY LAST yourself</b>, or hit ▶ Verify. The same
+        library code runs in <code>HollowVaultVerifier.sol</code> on-chain
+        (~31k gas via <code>ecrecover</code>). Five independent checks
+        that all have to pass.
       `,
       cta: "▶ Verify",
+      advanceOnClick: true,
       onNext: () => document.getElementById("btn-verify")?.click(),
       waitFor: () => {
         const checks = document.getElementById("checks");
@@ -154,6 +169,8 @@
 
   let currentStepIndex = 0;
   let overlayEl = null;
+  let activeClickHandler = null;
+  let activeKeyHandler = null;
 
   function ensureStyles() {
     if (document.getElementById("hv-tour-styles")) return;
@@ -161,14 +178,15 @@
     s.id = "hv-tour-styles";
     s.textContent = `
       #hv-tour-overlay { position: fixed; inset: 0; z-index: 99999; pointer-events: none; }
-      #hv-tour-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.62); pointer-events: auto; }
       #hv-tour-spotlight { position: fixed; box-shadow: 0 0 0 9999px rgba(0,0,0,0.62); border: 2px solid #ff8c00; border-radius: 6px; pointer-events: none; }
+      #hv-tour-spotlight.fullscreen { box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.62); border: none; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important; width: auto !important; height: auto !important; }
       #hv-tour-card { position: fixed; max-width: 460px; background: #0c0c0c; border: 1px solid #ff8c00; border-radius: 6px; padding: 16px 18px; pointer-events: auto; color: #ffd278; font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.55; box-shadow: 0 0 40px rgba(255,140,0,0.4); }
-      #hv-tour-card.centered { left: 50%; top: 50%; transform: translate(-50%, -50%); transition: none; }
+      #hv-tour-card.centered { left: 50%; top: 50%; transform: translate(-50%, -50%); }
       #hv-tour-card h3 { margin: 0 0 10px; color: #ff8c00; font-size: 13px; letter-spacing: 0.05em; }
       #hv-tour-card .body { color: #ffd278; }
       #hv-tour-card .body code { background: #1a1300; padding: 1px 4px; border-radius: 2px; color: #00d4ff; }
       #hv-tour-card .body b { color: #fff200; }
+      #hv-tour-card .body i { color: #fff200; font-style: normal; }
       #hv-tour-card .body a { color: #00d4ff; }
       #hv-tour-card .controls { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
       #hv-tour-card .controls .step { color: #6e6e6e; margin-right: auto; font-size: 11px; }
@@ -185,12 +203,10 @@
     overlayEl = document.createElement("div");
     overlayEl.id = "hv-tour-overlay";
     overlayEl.innerHTML = `
-      <div id="hv-tour-mask"></div>
       <div id="hv-tour-spotlight" hidden></div>
       <div id="hv-tour-card"></div>
     `;
     document.body.appendChild(overlayEl);
-    overlayEl.querySelector("#hv-tour-mask").addEventListener("click", closeTour);
   }
 
   function isFullyInViewport(rect) {
@@ -200,11 +216,20 @@
   function placeSpotlightAt(rect) {
     const pad = 6;
     const sp = overlayEl.querySelector("#hv-tour-spotlight");
+    sp.classList.remove("fullscreen");
     sp.hidden = false;
     sp.style.left = rect.left - pad + "px";
     sp.style.top = rect.top - pad + "px";
     sp.style.width = rect.width + pad * 2 + "px";
     sp.style.height = rect.height + pad * 2 + "px";
+  }
+
+  function showFullscreenDim() {
+    // Centered cards (welcome / closer) don't have a target — dim the
+    // whole viewport so the card pops without leaving an undimmed page.
+    const sp = overlayEl.querySelector("#hv-tour-spotlight");
+    sp.classList.add("fullscreen");
+    sp.hidden = false;
   }
 
   function placeCard(rect, placement, cardEl) {
@@ -259,7 +284,31 @@
     return card;
   }
 
+  function clearActiveClickHandler() {
+    if (activeClickHandler) {
+      document.removeEventListener("click", activeClickHandler, true);
+      activeClickHandler = null;
+    }
+  }
+
+  function installAdvanceOnClick(target) {
+    if (!target) return;
+    activeClickHandler = (e) => {
+      // Tour card clicks are handled by the buttons themselves.
+      const card = overlayEl?.querySelector("#hv-tour-card");
+      if (card && card.contains(e.target)) return;
+      if (target.contains(e.target)) {
+        // Small delay so the underlying click fires first (sign starts,
+        // preset gets selected, etc.) before waitFor begins polling.
+        setTimeout(() => userTriggeredAdvance(), 50);
+      }
+    };
+    // Capture phase so we see the click before the page handles it.
+    document.addEventListener("click", activeClickHandler, true);
+  }
+
   function showStep() {
+    clearActiveClickHandler();
     const step = STEPS[currentStepIndex];
     if (!step) {
       closeTour();
@@ -268,22 +317,18 @@
     const card = renderCard(step);
 
     if (step.kind === "centered") {
-      overlayEl.querySelector("#hv-tour-spotlight").hidden = true;
+      showFullscreenDim();
       placeCard(null, null, card);
       return;
     }
 
     const target = document.querySelector(step.target);
     if (!target) {
-      overlayEl.querySelector("#hv-tour-spotlight").hidden = true;
+      showFullscreenDim();
       placeCard(null, null, card);
       return;
     }
 
-    // Synchronous scroll then measure: behavior:"auto" finishes before the
-    // next paint, so getBoundingClientRect() returns the post-scroll position.
-    // (Smooth scroll runs async — the rect would be stale.) The spotlight's
-    // own CSS transition then animates the visual move.
     const rectBefore = target.getBoundingClientRect();
     if (!isFullyInViewport(rectBefore)) {
       target.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
@@ -291,11 +336,13 @@
     const rect = target.getBoundingClientRect();
     placeSpotlightAt(rect);
     placeCard(rect, step.placement, card);
+
+    if (step.advanceOnClick) installAdvanceOnClick(target);
   }
 
-  async function nextStep() {
+  async function advance({ ranOnNext }) {
     const step = STEPS[currentStepIndex];
-    if (step && step.onNext) {
+    if (step && step.onNext && !ranOnNext) {
       try { step.onNext(); } catch (_) { /* ignore */ }
     }
     currentStepIndex += 1;
@@ -313,7 +360,15 @@
     showStep();
   }
 
+  function nextStep() { return advance({ ranOnNext: false }); }
+  function userTriggeredAdvance() { return advance({ ranOnNext: true }); }
+
   function closeTour() {
+    clearActiveClickHandler();
+    if (activeKeyHandler) {
+      document.removeEventListener("keydown", activeKeyHandler, true);
+      activeKeyHandler = null;
+    }
     if (overlayEl) {
       overlayEl.remove();
       overlayEl = null;
@@ -326,14 +381,15 @@
     if (overlayEl) return;
     currentStepIndex = 0;
     buildOverlay();
+    activeKeyHandler = (e) => { if (e.key === "Escape") closeTour(); };
+    document.addEventListener("keydown", activeKeyHandler, true);
     showStep();
   }
 
   /**
    * Test-only probe. Returns the rectangle of the spotlight, the target's
-   * actual rectangle, and an overlap percentage. The browser-driven smoke
-   * test asserts overlapPct ≥ 0.95 for every spotlight step — if a future
-   * change desyncs the spotlight from its target, the test fails.
+   * actual rectangle, and an overlap percentage. Used by browser-driven
+   * smokes to assert overlapPct ≥ 0.95 for every spotlight step.
    */
   function probe() {
     const step = STEPS[currentStepIndex];
@@ -363,6 +419,7 @@
       targetRect: { left: t.left, top: t.top, width: t.width, height: t.height },
       spotlightRect: { left: s.left, top: s.top, width: s.width, height: s.height },
       overlapPct: Number(overlapPct.toFixed(3)),
+      advanceOnClick: !!step.advanceOnClick,
     };
   }
 

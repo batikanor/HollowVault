@@ -3,13 +3,17 @@ import assert from "node:assert/strict";
 import { BASE_URL, getText } from "../runner.mjs";
 
 /**
- * The in-UI guided tour is a hard requirement of the demo: a first-time
- * visitor must see the tutorial auto-pop, and an existing visitor must
- * find a TUTORIAL button to re-trigger it.
- *
- * Browser-driven positioning is verified separately by the smoke script
- * in e2e/browser-smoke.mjs (run with `npm run test:browser`) — the static
- * checks here lock the script's contract.
+ * Tour contract:
+ *  - tutorial.js exports its public API on window.
+ *  - / embeds the trigger + script tag.
+ *  - Step titles do NOT carry their own step number (counter is the
+ *    single source of truth).
+ *  - Every spotlight selector resolves to an id in index.html.
+ *  - Action steps (preset / sign / verify) are advanceOnClick:true so
+ *    users can click the highlighted element themselves and the tour
+ *    advances along with them.
+ *  - There is no #hv-tour-mask — the page stays interactive during the
+ *    tour and only the spotlight box-shadow dims the surroundings.
  */
 describe(`[e2e] guided tutorial @ ${BASE_URL}`, () => {
   it("/tutorial.js is served as JavaScript with the public API symbols", async () => {
@@ -18,11 +22,15 @@ describe(`[e2e] guided tutorial @ ${BASE_URL}`, () => {
     const ct = res.headers.get("content-type") || "";
     assert.match(ct, /javascript/);
     const body = await res.text();
-    assert.ok(body.includes("HOLLOW_VAULT_TOUR_START"));
-    assert.ok(body.includes("HOLLOW_VAULT_TOUR_NEXT"));
-    assert.ok(body.includes("HOLLOW_VAULT_TOUR_CLOSE"));
-    assert.ok(body.includes("HOLLOW_VAULT_TOUR_PROBE"));
-    assert.ok(body.includes("HOLLOW_VAULT_TOUR_STEP_COUNT"));
+    for (const sym of [
+      "HOLLOW_VAULT_TOUR_START",
+      "HOLLOW_VAULT_TOUR_NEXT",
+      "HOLLOW_VAULT_TOUR_CLOSE",
+      "HOLLOW_VAULT_TOUR_PROBE",
+      "HOLLOW_VAULT_TOUR_STEP_COUNT",
+    ]) {
+      assert.ok(body.includes(sym), `tutorial.js must export ${sym}`);
+    }
   });
 
   it("/ embeds the TUTORIAL trigger button + tutorial.js script", async () => {
@@ -35,8 +43,6 @@ describe(`[e2e] guided tutorial @ ${BASE_URL}`, () => {
 
   it("tutorial.js declares each headline step the demo depends on", async () => {
     const body = await (await fetch(BASE_URL + "/tutorial.js")).text();
-    // Step *titles* are user-facing; the counter "X / 8" is the position
-    // source-of-truth, so titles must NOT include their own step numbers.
     const required = [
       "WELCOME ABOARD",
       "Pick a real-world scenario",
@@ -52,12 +58,10 @@ describe(`[e2e] guided tutorial @ ${BASE_URL}`, () => {
     }
   });
 
-  it("tutorial.js title labels do NOT include their own step number (counter is the source of truth)", async () => {
+  it("tutorial.js title labels never include their own step number", async () => {
     const body = await (await fetch(BASE_URL + "/tutorial.js")).text();
-    // Each STEP entry has `title: "..."`. Pull all titles, assert none has
-    // a "STEP N" prefix that could mismatch the "X / 8" counter.
     const titleMatches = [...body.matchAll(/title:\s*"([^"]+)"/g)].map((m) => m[1]);
-    assert.ok(titleMatches.length >= 8, `expected ≥8 step titles, got ${titleMatches.length}`);
+    assert.ok(titleMatches.length >= 8);
     for (const t of titleMatches) {
       assert.doesNotMatch(t, /\bSTEP\s+\d/i, `title "${t}" has a hardcoded step number`);
     }
@@ -72,5 +76,57 @@ describe(`[e2e] guided tutorial @ ${BASE_URL}`, () => {
       const idLiteral = sel.slice(1);
       assert.ok(html.includes(`id="${idLiteral}"`), `index.html must have id="${idLiteral}"`);
     }
+  });
+
+  it("action steps are flagged advanceOnClick:true so user clicks advance the tour", async () => {
+    const tour = await (await fetch(BASE_URL + "/tutorial.js")).text();
+    // Each of these targets corresponds to a step where the user
+    // performs the headline action — clicking the spotlit element
+    // must auto-advance the tour, not require a separate Next click.
+    const actionTargets = ["#presets", "#btn-sign", "#btn-verify"];
+    for (const sel of actionTargets) {
+      // Look for the step block that has this selector and check it
+      // has advanceOnClick: true within that block (next ~30 lines).
+      const blockStart = tour.indexOf(`target: "${sel}"`);
+      assert.ok(blockStart >= 0, `expected a step block for ${sel}`);
+      const blockSnippet = tour.slice(blockStart, blockStart + 800);
+      assert.match(
+        blockSnippet,
+        /advanceOnClick:\s*true/,
+        `step for ${sel} must be advanceOnClick:true (interactive demo)`,
+      );
+    }
+  });
+
+  it("read-only steps are NOT advanceOnClick (don't trap users mid-edit)", async () => {
+    const tour = await (await fetch(BASE_URL + "/tutorial.js")).text();
+    const readOnlyTargets = ["#msg", "#raw", "#checks"];
+    for (const sel of readOnlyTargets) {
+      const blockStart = tour.indexOf(`target: "${sel}"`);
+      assert.ok(blockStart >= 0);
+      const blockSnippet = tour.slice(blockStart, blockStart + 800);
+      assert.doesNotMatch(
+        blockSnippet,
+        /advanceOnClick:\s*true/,
+        `step for ${sel} must NOT be advanceOnClick (it's read-only)`,
+      );
+    }
+  });
+
+  it("there is no full-cover mask that would block page interaction", async () => {
+    const tour = await (await fetch(BASE_URL + "/tutorial.js")).text();
+    // The original implementation had a #hv-tour-mask that swallowed all
+    // page clicks. We now rely on the spotlight's box-shadow alone so the
+    // page stays interactive during the tour.
+    assert.doesNotMatch(tour, /id=["']hv-tour-mask["']/);
+    assert.doesNotMatch(tour, /#hv-tour-mask\s*\{/);
+  });
+
+  it("tour body text guides the user to either click directly or use the CTA", async () => {
+    const tour = await (await fetch(BASE_URL + "/tutorial.js")).text();
+    // Hand-holding for users who want to drive themselves.
+    assert.match(tour, /Click any preset/i);
+    assert.match(tour, /Click F1/i);
+    assert.match(tour, /Click F2/i);
   });
 });
