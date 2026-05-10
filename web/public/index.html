@@ -272,6 +272,7 @@
   <span>SIGNER <b id="t-type">—</b></span>
   <span>ADDR <b id="t-addr">—</b></span>
   <span class="spacer"></span>
+  <button id="hv-tour-trigger" onclick="window.HOLLOW_VAULT_TOUR_START && window.HOLLOW_VAULT_TOUR_START()">▶ TUTORIAL</button>
   <span class="ticker-code">SESSION <b id="t-count">0</b></span>
   <span>LAST <b id="t-lat">— ms</b></span>
   <span class="live" id="t-conn">●</span>
@@ -462,6 +463,7 @@
 
 <script src="examples.js"></script>
 <script src="setup-banner.js"></script>
+<script src="tutorial.js"></script>
 <script>window.hollowVaultMountSetupBanner && window.hollowVaultMountSetupBanner("/api");</script>
 <script>
   const SIGNER = "/api";
