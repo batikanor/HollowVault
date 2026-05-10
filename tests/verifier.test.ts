@@ -1,11 +1,14 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { ensureLocalSigner, type SignerHandle } from "../signer/src/signer.js";
-import { getCosmicEntropy } from "../signer/src/orbitport.js";
-import { signAttestation, type Attestation } from "../signer/src/attestation.js";
+import {
+  generateLocalSigner,
+  getCosmicEntropy,
+  signAttestation,
+  type Attestation,
+  type SignerHandle,
+} from "@hollow-vault/core";
 import { verifyAttestation } from "../web/lib/verify.js";
 
-process.env.KEYSTORE_PATH = "/tmp/hollow-vault-test-verifier.json";
 process.env.ORBITPORT_MODE = "mock";
 
 let signer: SignerHandle;
@@ -16,7 +19,7 @@ function clone(att: Attestation): Attestation {
 }
 
 before(async () => {
-  signer = ensureLocalSigner();
+  signer = generateLocalSigner().signer;
   const cosmic = await getCosmicEntropy();
   validAttestation = await signAttestation(signer, "valid message", cosmic);
 });

@@ -10,10 +10,8 @@ import { ResultPanel } from "./ResultPanel";
 
 type Stage = "idle" | "fetch" | "sign" | "done" | "error";
 
-// Real-world signing patterns. Each picker preset substitutes {address} and
-// {timestamp} on click. Designed to mirror what an actual Web3 user would
-// sign: SIWE login, governance vote, sealed-bid auction, on-the-record
-// prediction, source-protected disclosure.
+// Picker presets — real-world Web3 signing scenarios with the signer's
+// address interpolated in.
 const EXAMPLES: Array<{ short: string; build: (addr: string) => string }> = [
   {
     short: "Login (SIWE)",
@@ -54,20 +52,16 @@ export function SignFlow() {
   const [att, setAtt] = useState<Attestation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Probe the signer once on mount to learn the KMS-backed wallet address,
-  // then refill the active example so {address} interpolates correctly.
   useEffect(() => {
     let cancelled = false;
-    fetch("http://localhost:8080/identity")
+    fetch("/api/identity")
       .then((r) => r.json())
       .then((j: { address?: string }) => {
-        if (cancelled) return;
-        if (j.address) {
-          setSignerAddr(j.address);
-          setMessage(buildExample(activeEx, j.address));
-        }
+        if (cancelled || !j.address) return;
+        setSignerAddr(j.address);
+        setMessage(buildExample(activeEx, j.address));
       })
-      .catch(() => { /* signer down — leave the <your-wallet-address> placeholder */ });
+      .catch(() => { /* signer down — keep the placeholder */ });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -76,10 +70,6 @@ export function SignFlow() {
     setError(null);
     setAtt(null);
     setStage("fetch");
-
-    // The animation runs while the request is in flight. We deliberately give
-    // the user a beat to see what's happening — the actual call usually takes
-    // 100-400ms in mock mode, longer in real mode.
     const startedAt = performance.now();
 
     try {
@@ -92,12 +82,9 @@ export function SignFlow() {
       if (!res.ok) {
         throw new Error(data?.hint || data?.error || `signer error ${res.status}`);
       }
-      // Hold the "fetch" stage visible for at least 1.4s so the cosmic-ray
-      // animation lands.
+      // Hold the cosmic-ray animation for ≥1.4s so the user sees it land.
       const elapsed = performance.now() - startedAt;
-      if (elapsed < 1400) {
-        await new Promise((r) => setTimeout(r, 1400 - elapsed));
-      }
+      if (elapsed < 1400) await new Promise((r) => setTimeout(r, 1400 - elapsed));
       setStage("sign");
       await new Promise((r) => setTimeout(r, 600));
       setAtt(data as Attestation);
@@ -163,7 +150,7 @@ export function SignFlow() {
 
           <div className="flex flex-col items-center gap-2">
             <DeviceIcon glowing={signing || done} />
-            <span className="text-xs text-[var(--color-space-muted)]">Edge Signer · USB Armory</span>
+            <span className="text-xs text-[var(--color-space-muted)]">Orbitport KMS · off-device</span>
           </div>
         </div>
       </section>
@@ -181,8 +168,8 @@ export function SignFlow() {
         />
         <StageBadge
           state={done ? "done" : "idle"}
-          label="3. ECDSA sign on edge device"
-          detail="secp256k1, RFC 6979 + cosmic extra-entropy"
+          label="3. ECDSA sign in Orbitport KMS"
+          detail="secp256k1 DIGEST mode — private key never leaves the gateway TEE"
         />
       </section>
 

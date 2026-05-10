@@ -1,15 +1,17 @@
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { ensureLocalSigner, type SignerHandle } from "../signer/src/signer.js";
-import { getCosmicEntropy } from "../signer/src/orbitport.js";
-import { signBatch } from "../signer/src/batch.js";
+import {
+  generateLocalSigner,
+  getCosmicEntropy,
+  signBatch,
+  type SignerHandle,
+} from "@hollow-vault/core";
 
-process.env.KEYSTORE_PATH = "/tmp/hollow-vault-test-batch.json";
 process.env.ORBITPORT_MODE = "mock";
 
 let signer: SignerHandle;
 
-before(() => { signer = ensureLocalSigner(); });
+before(() => { signer = generateLocalSigner().signer; });
 
 describe("batch sub-seed derivation", () => {
   it("produces N attestations from one master cosmic draw", async () => {

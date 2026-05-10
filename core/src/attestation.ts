@@ -1,7 +1,6 @@
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import type { CosmicEntropy } from "./orbitport.js";
-import { fromHex } from "./orbitport.js";
+import { fromHex, type CosmicEntropy } from "./orbitport.js";
 import type { SignerHandle } from "./signer.js";
 
 export interface Attestation {
@@ -23,8 +22,8 @@ export interface Attestation {
   };
 }
 
-const PAYLOAD_SCHEME = "hollow-vault/v1|";
-const PAYLOAD_SEPARATOR = "|";
+export const PAYLOAD_SCHEME = "hollow-vault/v1|";
+export const PAYLOAD_SEPARATOR = "|";
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
 
@@ -58,12 +57,9 @@ export async function signAttestation(
 ): Promise<Attestation> {
   const messageHashBytes = keccak_256(utf8(message));
   const messageHash = "0x" + bytesToHex(messageHashBytes);
-
   const payloadHashBytes = computePayloadHash(cosmic.seed, cosmic.timestamp, messageHash);
   const payloadHash = "0x" + bytesToHex(payloadHashBytes);
-
   const { compactSig, recoveryId } = await signer.sign(payloadHashBytes);
-
   return {
     message,
     messageHash,

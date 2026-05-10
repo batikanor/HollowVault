@@ -1,8 +1,3 @@
-/**
- * Vercel-friendly cosmic-entropy fetch. Same shape as
- * signer/src/orbitport.ts, but holds no on-disk cache and is safe to import
- * from a Next.js serverless route.
- */
 import { OrbitportSDK } from "@spacecomputer-io/orbitport-sdk-ts";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -17,14 +12,16 @@ export interface CosmicEntropy {
   apiSrc?: string;
 }
 
+export type Mode = "real" | "mock";
+
 const reAttestPrivateKey = ed25519.utils.randomSecretKey();
 const reAttestPublicKey = ed25519.getPublicKey(reAttestPrivateKey);
 
-export function currentMode(): "real" | "mock" {
+export function currentMode(): Mode {
   return (process.env.ORBITPORT_MODE ?? "real").toLowerCase() === "real" ? "real" : "mock";
 }
 
-export function hasCredentials(): boolean {
+export function hasOrbitportCredentials(): boolean {
   return !!(process.env.ORBITPORT_CLIENT_ID && process.env.ORBITPORT_CLIENT_SECRET);
 }
 
@@ -69,7 +66,7 @@ export async function getCosmicEntropy(): Promise<CosmicEntropy> {
   return reAttest(hexToBytes(cleanHex), body.src ?? "trng");
 }
 
-export function exportReAttestPublicKey(): string {
+export function reAttestPublicKeyHex(): string {
   return bytesToHex(reAttestPublicKey);
 }
 

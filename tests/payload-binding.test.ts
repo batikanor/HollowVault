@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
-import { computePayloadHash } from "../signer/src/attestation.js";
+import { computePayloadHash } from "@hollow-vault/core";
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
 

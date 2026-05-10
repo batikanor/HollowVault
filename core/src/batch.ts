@@ -1,9 +1,9 @@
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { fromHex, type CosmicEntropy } from "./orbitport";
-import type { SignerHandle } from "./signer";
-import { signAttestation, type Attestation } from "./attestation";
+import { fromHex, type CosmicEntropy } from "./orbitport.js";
+import type { SignerHandle } from "./signer.js";
+import { signAttestation, type Attestation } from "./attestation.js";
 
 const SUB_SEED_DOMAIN = "cosmic-batch/v1";
 const BATCH_ID_DOMAIN = "cosmic-batch-id/v1";

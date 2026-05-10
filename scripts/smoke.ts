@@ -1,26 +1,20 @@
 /**
- * End-to-end smoke test. Runs the signer in-process (LocalSigner — no network,
- * no KMS), signs a message, and verifies it using the same library code the
- * web app and CLI use. Useful both as CI and as a quick sanity check before
- * a demo.
- *
- * Run with:    npm run smoke
- *
- * For the KMS path, run `npm run dev` with real credentials in `.env` and
- * use the API directly — KMS createKey is a real network call we don't want
- * to hit on every smoke run.
+ * End-to-end smoke test. Generates an in-process LocalSigner (no network, no
+ * KMS), signs a message, and verifies it using the same library code the web
+ * app and CLI use. Doubles as CI and a pre-demo sanity check.
  */
-process.env.KEYSTORE_PATH = process.env.KEYSTORE_PATH ?? "/tmp/hollow-vault-smoke.json";
 process.env.ORBITPORT_MODE = "mock";
 
-import { ensureLocalSigner } from "../signer/src/signer.js";
-import { getCosmicEntropy } from "../signer/src/orbitport.js";
-import { signAttestation } from "../signer/src/attestation.js";
+import {
+  generateLocalSigner,
+  getCosmicEntropy,
+  signAttestation,
+} from "@hollow-vault/core";
 import { verifyAttestation } from "../web/lib/verify.js";
 
 async function main() {
   console.log("→ booting LocalSigner (mock mode)");
-  const signer = ensureLocalSigner();
+  const { signer } = generateLocalSigner();
   console.log("  signerType:", signer.identity.signerType);
   console.log("  address:   ", signer.identity.address);
 

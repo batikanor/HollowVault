@@ -11,6 +11,7 @@
     "start": "node --env-file=../.env dist/server.js"
   },
   "dependencies": {
+    "@hollow-vault/core": "*",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
     "@spacecomputer-io/orbitport-sdk-ts": "^0.2.1",

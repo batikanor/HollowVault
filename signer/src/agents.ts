@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { OrbitportSDK } from "@spacecomputer-io/orbitport-sdk-ts";
-import { hexToBytes } from "@noble/hashes/utils.js";
-import type { SignerHandle } from "./signer.js";
+import { createKmsKey, kmsSignerFromIdentity, type SignerHandle } from "@hollow-vault/core";
 import type { AgentPolicy } from "./policy.js";
 
 export interface Agent {
@@ -29,6 +28,7 @@ function newAgentId(): string {
   return `agent-${Date.now()}-${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
 
+// KMS aliases must match `^[A-Za-z0-9_-]+$`. We strip everything else.
 function sanitizeAlias(name: string): string {
   const ascii = name
     .normalize("NFKD")
@@ -69,58 +69,26 @@ export async function spawnAgent(
 ): Promise<Agent> {
   const agentId = newAgentId();
   const alias = `${ALIAS_PREFIX}-${sanitizeAlias(name)}-${agentId}`;
-  const created = await sdk.kms.createKey({
-    alias,
-    keySpec: "ECC_SECG_P256K1",
-    keyUsage: "SIGN_VERIFY",
-    scheme: "ETHEREUM",
-    description: `AI agent wallet for ${name}`,
-    tags: [],
-  });
-  const md = created.data.KeyMetadata;
-  if (!md.Address || !md.PublicKey) {
-    throw new Error("KMS createKey returned an incomplete agent identity");
-  }
+  const identity = await createKmsKey(sdk, alias, `AI agent wallet for ${name}`);
   const agent: Agent = {
     agentId,
     name,
-    address: md.Address.toLowerCase(),
-    publicKey: md.PublicKey,
-    kmsKeyId: md.KeyId,
+    address: identity.address,
+    publicKey: identity.publicKey,
+    kmsKeyId: identity.keyId,
     policy,
-    createdAt: md.CreationDate ?? new Date().toISOString(),
+    createdAt: identity.createdAt,
   };
   persistAgent(dataDir, agent);
   return agent;
 }
 
 export function signerForAgent(sdk: OrbitportSDK, agent: Agent): SignerHandle {
-  return {
-    identity: {
-      signerType: "kms",
-      address: agent.address,
-      publicKey: agent.publicKey,
-      keyId: agent.kmsKeyId,
-      createdAt: agent.createdAt,
-    },
-    async sign(digest32) {
-      if (digest32.length !== 32) {
-        throw new Error(`agent KMS DIGEST sign requires 32 bytes, got ${digest32.length}`);
-      }
-      const result = await sdk.kms.sign({
-        keyId: agent.kmsKeyId,
-        message: digest32,
-        signingAlgorithm: "ETHEREUM_SECP256K1",
-        messageType: "DIGEST",
-      });
-      const sigBytes = hexToBytes(result.data.Signature.replace(/^0x/, ""));
-      if (sigBytes.length !== 65) {
-        throw new Error(`agent KMS returned ${sigBytes.length}-byte signature, expected 65`);
-      }
-      const compactSig = sigBytes.slice(0, 64);
-      const vByte = sigBytes[64];
-      const recoveryId = vByte === 27 || vByte === 28 ? vByte - 27 : vByte & 1;
-      return { compactSig, recoveryId };
-    },
-  };
+  return kmsSignerFromIdentity(sdk, {
+    signerType: "kms",
+    address: agent.address,
+    publicKey: agent.publicKey,
+    keyId: agent.kmsKeyId,
+    createdAt: agent.createdAt,
+  });
 }

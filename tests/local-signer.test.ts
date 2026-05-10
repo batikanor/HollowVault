@@ -3,16 +3,18 @@ import assert from "node:assert/strict";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
-import { ensureLocalSigner, type SignerHandle } from "../signer/src/signer.js";
-import { getCosmicEntropy } from "../signer/src/orbitport.js";
-import { signAttestation } from "../signer/src/attestation.js";
+import {
+  generateLocalSigner,
+  getCosmicEntropy,
+  signAttestation,
+  type SignerHandle,
+} from "@hollow-vault/core";
 
-process.env.KEYSTORE_PATH = "/tmp/hollow-vault-test-local.json";
 process.env.ORBITPORT_MODE = "mock";
 
 let signer: SignerHandle;
 
-before(() => { signer = ensureLocalSigner(); });
+before(() => { signer = generateLocalSigner().signer; });
 
 describe("LocalSigner identity", () => {
   it("returns a 65-byte uncompressed public key", () => {

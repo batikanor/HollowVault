@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { hashTypedData } from "viem";
-import { eip712Digest, type EIP712TypedData } from "../signer/src/typed.js";
+import { eip712Digest, type EIP712TypedData } from "@hollow-vault/core";
 
 const usdcPermit: EIP712TypedData = {
   domain: {

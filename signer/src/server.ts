@@ -1,11 +1,17 @@
 import express from "express";
 import { z } from "zod";
-import { exportMockSatellitePublicKey, getCosmicEntropy, orbitportSdk } from "./orbitport.js";
-import { signAttestation } from "./attestation.js";
-import { signTypedAttestation, type EIP712TypedData } from "./typed.js";
-import { signBatch } from "./batch.js";
+import {
+  getCosmicEntropy,
+  orbitportSdk,
+  reAttestPublicKeyHex,
+  signAttestation,
+  signBatch,
+  signTypedAttestation,
+  type EIP712TypedData,
+  type SignerHandle,
+} from "@hollow-vault/core";
+import { ensureKmsSigner, ensureLocalSigner } from "./cache.js";
 import { getDrandInfo, getDrandRound } from "./drand.js";
-import { ensureKmsSigner, ensureLocalSigner, type SignerHandle } from "./signer.js";
 import { defaultDataDir } from "./paths.js";
 import {
   type AgentIntent,
@@ -20,7 +26,14 @@ const PORT = Number(process.env.SIGNER_PORT ?? 8080);
 const MODE = (process.env.ORBITPORT_MODE ?? "real").toLowerCase();
 const HAS_CREDS = !!(process.env.ORBITPORT_CLIENT_ID && process.env.ORBITPORT_CLIENT_SECRET);
 
-/** Setup state surfaced to clients via /health and /identity. */
+const SETUP_STEPS = [
+  "Open https://accounts.spacecomputer.io/",
+  "Sign up or log in.",
+  "On the dashboard, generate an OAuth Client ID + Client Secret pair.",
+  "Edit the file '.env' in this project and paste them into ORBITPORT_CLIENT_ID and ORBITPORT_CLIENT_SECRET.",
+  "Restart the signer (Ctrl+C, then `npm run dev`).",
+];
+
 type SetupState =
   | { kind: "ready"; signer: SignerHandle }
   | { kind: "needs-credentials"; reason: string; steps: string[] }
@@ -30,26 +43,18 @@ let state: SetupState = MODE === "real" && !HAS_CREDS
   ? {
       kind: "needs-credentials",
       reason: "ORBITPORT_MODE=real but ORBITPORT_CLIENT_ID / ORBITPORT_CLIENT_SECRET are not set.",
-      steps: [
-        "Open https://accounts.spacecomputer.io/",
-        "Sign up or log in.",
-        "On the dashboard, generate an OAuth Client ID + Client Secret pair.",
-        "Edit the file '.env' in this project and paste them into ORBITPORT_CLIENT_ID and ORBITPORT_CLIENT_SECRET.",
-        "Restart the signer (Ctrl+C, then `npm run dev`).",
-      ],
+      steps: SETUP_STEPS,
     }
   : { kind: "error", reason: "uninitialised" };
 
 async function bootSigner(): Promise<SignerHandle> {
-  if (MODE === "real") {
-    if (!HAS_CREDS) {
-      throw new Error(
-        "ORBITPORT_MODE=real but credentials are missing. Set ORBITPORT_CLIENT_ID + ORBITPORT_CLIENT_SECRET in .env (see https://accounts.spacecomputer.io/).",
-      );
-    }
-    return ensureKmsSigner(orbitportSdk());
+  if (MODE !== "real") return ensureLocalSigner();
+  if (!HAS_CREDS) {
+    throw new Error(
+      "ORBITPORT_MODE=real but credentials are missing. Set ORBITPORT_CLIENT_ID + ORBITPORT_CLIENT_SECRET in .env (see https://accounts.spacecomputer.io/).",
+    );
   }
-  return ensureLocalSigner();
+  return ensureKmsSigner();
 }
 
 async function requireSigner(): Promise<SignerHandle> {
@@ -59,16 +64,15 @@ async function requireSigner(): Promise<SignerHandle> {
     (err as Error & { setup?: SetupState }).setup = state;
     throw err;
   }
-  // Try to boot lazily on first call (e.g. after the warm-up failed transiently).
   const signer = await bootSigner();
   state = { kind: "ready", signer };
   return signer;
 }
 
-function setupPayload(): { setupRequired: true; reason: string; steps: string[]; signupUrl: string; envFile: string } | null {
+function setupPayload() {
   if (state.kind !== "needs-credentials") return null;
   return {
-    setupRequired: true,
+    setupRequired: true as const,
     reason: state.reason,
     steps: state.steps,
     signupUrl: "https://accounts.spacecomputer.io/",
@@ -76,13 +80,18 @@ function setupPayload(): { setupRequired: true; reason: string; steps: string[];
   };
 }
 
+function setupGuard(res: express.Response): boolean {
+  const setup = setupPayload();
+  if (!setup) return false;
+  res.status(503).json({ error: "signer setup required", ...setup });
+  return true;
+}
+
 const app = express();
 app.use(express.json({ limit: "256kb" }));
 
 // Permissive CORS for the alt-UI demos served on different localhost ports.
-// The signer runs only on the dev machine and never holds user funds, so a
-// blanket `*` is fine here. In production you would gate this to known
-// origins.
+// The signer runs only on the dev machine and never holds user funds.
 app.use((req, res, next) => {
   res.setHeader("access-control-allow-origin", "*");
   res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
@@ -129,7 +138,7 @@ app.get("/identity", async (_req, res) => {
       publicKey: s.identity.publicKey,
       keyId: s.identity.keyId,
       createdAt: s.identity.createdAt,
-      mockSatellitePublicKey: MODE === "mock" ? exportMockSatellitePublicKey() : null,
+      mockSatellitePublicKey: MODE === "mock" ? reAttestPublicKeyHex() : null,
       capabilities: ["sign", "sign-typed", "sign-batch", "drand-adapter", "agents"],
     });
   } catch (err) {
@@ -137,16 +146,10 @@ app.get("/identity", async (_req, res) => {
   }
 });
 
-// drand-shape adapter — any drand-using dApp can point its client here.
-app.get("/info", async (_req, res) => {
-  res.json(await getDrandInfo());
-});
+app.get("/info", async (_req, res) => res.json(await getDrandInfo()));
 app.get("/public/latest", async (_req, res) => {
-  try {
-    res.json(await getDrandRound());
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
-  }
+  try { res.json(await getDrandRound()); }
+  catch (err) { res.status(500).json({ error: String(err) }); }
 });
 app.get("/public/:round", async (req, res) => {
   const r = Number(req.params.round);
@@ -154,25 +157,11 @@ app.get("/public/:round", async (req, res) => {
     res.status(400).json({ error: "round must be a positive integer" });
     return;
   }
-  try {
-    res.json(await getDrandRound(r));
-  } catch (err) {
-    res.status(500).json({ error: String(err) });
-  }
+  try { res.json(await getDrandRound(r)); }
+  catch (err) { res.status(500).json({ error: String(err) }); }
 });
 
-const SignSchema = z.object({
-  message: z.string().min(1).max(4096),
-});
-
-function setupGuard(res: express.Response): boolean {
-  const setup = setupPayload();
-  if (setup) {
-    res.status(503).json({ error: "signer setup required", ...setup });
-    return true;
-  }
-  return false;
-}
+const SignSchema = z.object({ message: z.string().min(1).max(4096) });
 
 app.post("/sign", async (req, res) => {
   if (setupGuard(res)) return;
@@ -184,8 +173,7 @@ app.post("/sign", async (req, res) => {
   try {
     const s = await requireSigner();
     const cosmic = await getCosmicEntropy();
-    const attestation = await signAttestation(s, parsed.data.message, cosmic);
-    res.json(attestation);
+    res.json(await signAttestation(s, parsed.data.message, cosmic));
   } catch (err) {
     console.error("[signer] sign failed", err);
     res.status(500).json({ error: "sign failed", detail: String(err) });
@@ -209,8 +197,7 @@ app.post("/sign-typed", async (req, res) => {
   try {
     const s = await requireSigner();
     const cosmic = await getCosmicEntropy();
-    const attestation = await signTypedAttestation(s, parsed.data as EIP712TypedData, cosmic);
-    res.json(attestation);
+    res.json(await signTypedAttestation(s, parsed.data as EIP712TypedData, cosmic));
   } catch (err) {
     console.error("[signer] sign-typed failed", err);
     res.status(500).json({ error: "sign-typed failed", detail: String(err) });
@@ -231,8 +218,7 @@ app.post("/sign-batch", async (req, res) => {
   try {
     const s = await requireSigner();
     const cosmic = await getCosmicEntropy();
-    const result = await signBatch(s, parsed.data.messages, cosmic);
-    res.json(result);
+    res.json(await signBatch(s, parsed.data.messages, cosmic));
   } catch (err) {
     console.error("[signer] sign-batch failed", err);
     res.status(500).json({ error: "sign-batch failed", detail: String(err) });
@@ -369,10 +355,6 @@ app.post("/agents/:agentId/intent", async (req, res) => {
 app.use((_req, res) => res.status(404).json({ error: "not found" }));
 
 (async () => {
-  // Warm up the signer eagerly so the first /sign call doesn't pay the
-  // KMS createKey latency. If credentials are missing we don't try at all —
-  // every endpoint will return setupRequired with action steps until the
-  // user populates .env and restarts.
   if (state.kind === "needs-credentials") {
     console.error("");
     console.error("  ╔════════════════════════════════════════════════════════════════╗");
@@ -398,7 +380,5 @@ app.use((_req, res) => res.status(404).json({ error: "not found" }));
       state = { kind: "error", reason: String(err) };
     }
   }
-  app.listen(PORT, () => {
-    console.log(`[signer] listening on :${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`[signer] listening on :${PORT}`));
 })();

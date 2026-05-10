@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npm --workspace @hollow-vault/web run build",
+  "outputDirectory": "web/.next",
+  "installCommand": "npm install --include=dev"
+}

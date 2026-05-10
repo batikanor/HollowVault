@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { AgentIntent, PolicyDecision } from "./policy.js";
 import { transferAmountWei } from "./policy.js";
-import type { Attestation } from "./attestation.js";
+import type { Attestation } from "@hollow-vault/core";
 
 export interface AuditEntry {
   agentId: string;

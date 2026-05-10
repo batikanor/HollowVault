@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCosmicEntropy } from "@/lib/server/orbitport";
-import { signAttestation } from "@/lib/server/attestation";
+import { getCosmicEntropy, signAttestation } from "@hollow-vault/core";
 import { getSigner, setupPayload } from "@/lib/server/state";
 
 export const runtime = "nodejs";

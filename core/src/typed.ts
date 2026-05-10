@@ -1,13 +1,6 @@
-/**
- * EIP-712 typed-data signing. Same flow as raw-message signing — fetch cosmic
- * entropy, bind it into the signed payload, delegate signing to the
- * SignerHandle — but the *outer* digest follows the EIP-712 standard so any
- * dapp's existing verifier consumes our signature without modification.
- */
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
-import type { CosmicEntropy } from "./orbitport.js";
-import { fromHex } from "./orbitport.js";
+import { fromHex, type CosmicEntropy } from "./orbitport.js";
 import type { SignerHandle } from "./signer.js";
 
 export interface EIP712Domain {
@@ -27,10 +20,8 @@ export interface EIP712TypedData {
 
 export interface TypedAttestation {
   typedData: EIP712TypedData;
-  /** EIP-712 digest the user's wallet/dapp would normally sign. */
   eip712Digest: string;
   cosmic: CosmicEntropy;
-  /** keccak256("cosmic-typed/v1|" || seed || "|" || ts || "|" || eip712Digest). */
   payloadHash: string;
   signature: string;
   recoveryId: number;
@@ -47,16 +38,6 @@ export interface TypedAttestation {
 }
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
-
-type AbiType = string;
-
-function isStaticPrimitive(t: AbiType): boolean {
-  if (t === "address" || t === "bool") return true;
-  if (/^bytes\d+$/.test(t)) return true;
-  if (/^uint\d*$/.test(t)) return true;
-  if (/^int\d*$/.test(t)) return true;
-  return false;
-}
 
 function dependencies(primaryType: string, types: EIP712TypedData["types"]): string[] {
   const seen = new Set<string>();
@@ -101,7 +82,7 @@ function uintToBytes32(v: bigint | number | string): Uint8Array {
   return bytes;
 }
 
-function encodeValue(t: AbiType, v: unknown, types: EIP712TypedData["types"]): Uint8Array {
+function encodeValue(t: string, v: unknown, types: EIP712TypedData["types"]): Uint8Array {
   const arrMatch = t.match(/^(.+)\[(\d*)\]$/);
   if (arrMatch) {
     const inner = arrMatch[1];
@@ -111,9 +92,7 @@ function encodeValue(t: AbiType, v: unknown, types: EIP712TypedData["types"]): U
     for (let i = 0; i < encoded.length; i++) buf.set(encoded[i], i * 32);
     return keccak_256(buf);
   }
-  if (types[t]) {
-    return hashStruct(t, v as Record<string, unknown>, types);
-  }
+  if (types[t]) return hashStruct(t, v as Record<string, unknown>, types);
   if (t === "string") return keccak_256(utf8(String(v)));
   if (t === "bytes") {
     const bytes = typeof v === "string" ? fromHex(v) : (v as Uint8Array);
@@ -131,7 +110,6 @@ function encodeValue(t: AbiType, v: unknown, types: EIP712TypedData["types"]): U
     return out;
   }
   if (/^u?int\d*$/.test(t)) return uintToBytes32(v as bigint | number | string);
-  if (isStaticPrimitive(t)) return uintToBytes32(v as never);
   throw new Error(`unsupported EIP-712 type: ${t}`);
 }
 
@@ -176,7 +154,7 @@ export function eip712Digest(td: EIP712TypedData): Uint8Array {
   return keccak_256(buf);
 }
 
-export function computeTypedPayloadHash(
+function computeTypedPayloadHash(
   seedHex: string,
   timestamp: string,
   eip712DigestBytes: Uint8Array,
@@ -221,8 +199,7 @@ export async function signTypedAttestation(
     signedAt: new Date().toISOString(),
     meta: {
       scheme: "hollow-vault-typed/v1",
-      nonceMode:
-        signer.identity.signerType === "kms" ? "kms-orbit-managed" : "local-rfc6979",
+      nonceMode: signer.identity.signerType === "kms" ? "kms-orbit-managed" : "local-rfc6979",
       signerType: signer.identity.signerType,
       keyId: signer.identity.keyId,
       deviceCreatedAt: signer.identity.createdAt,

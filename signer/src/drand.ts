@@ -24,7 +24,7 @@
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { exportMockSatellitePublicKey, getCosmicEntropy } from "./orbitport.js";
+import { getCosmicEntropy, reAttestPublicKeyHex } from "@hollow-vault/core";
 
 const PERIOD_SECONDS = 60;
 const GENESIS_UNIX = 1_770_000_000; // arbitrary fixed point in 2026
@@ -50,7 +50,7 @@ function roundStartTime(round: number): number {
 
 export async function getDrandInfo() {
   return {
-    public_key: exportMockSatellitePublicKey(),
+    public_key: reAttestPublicKeyHex(),
     period: PERIOD_SECONDS,
     genesis_time: GENESIS_UNIX,
     hash: bytesToHex(CHAIN_HASH),
