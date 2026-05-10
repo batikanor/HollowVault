@@ -71,6 +71,11 @@
     background: var(--panel);
     padding: 10px 12px;
     min-height: 180px;
+    /* CSS Grid items default to min-width:auto = min-content of their content;
+       a long unbreakable hex string blew the columns wider than the viewport
+       and re-flowed the layout. Force the columns to honour 1.4fr 1fr 1fr. */
+    min-width: 0;
+    overflow: hidden;
   }
   .panel.span2 { grid-column: span 2; }
   .panel.span3 { grid-column: span 3; }
