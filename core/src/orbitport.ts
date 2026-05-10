@@ -37,9 +37,12 @@ export function orbitportSdk(): OrbitportSDK {
   return cachedSdk;
 }
 
-function reAttest(seedBytes: Uint8Array, apiSrc?: string): CosmicEntropy {
+function attestSeed(
+  seedBytes: Uint8Array,
+  opts: { timestamp?: string; apiSrc?: string } = {},
+): CosmicEntropy {
   const seed = bytesToHex(seedBytes);
-  const timestamp = new Date().toISOString();
+  const timestamp = opts.timestamp ?? new Date().toISOString();
   const digest = sha256(new TextEncoder().encode(seed + "|" + timestamp));
   const signature = ed25519.sign(digest, reAttestPrivateKey);
   return {
@@ -47,14 +50,24 @@ function reAttest(seedBytes: Uint8Array, apiSrc?: string): CosmicEntropy {
     timestamp,
     satelliteSignature: bytesToHex(signature),
     satellitePublicKey: bytesToHex(reAttestPublicKey),
-    source: apiSrc ? "real" : "mock",
-    ...(apiSrc ? { apiSrc } : {}),
+    source: opts.apiSrc ? "real" : "mock",
+    ...(opts.apiSrc ? { apiSrc: opts.apiSrc } : {}),
   };
+}
+
+/**
+ * Re-attest a derived sub-seed under the same satellite-attest key. The
+ * batch flow uses this so each sub-attestation has a satellite signature
+ * that actually verifies against its (sub-)seed, while inheriting the
+ * master draw's timestamp + provenance for freshness/audit.
+ */
+export function reAttestSubSeed(seedBytes: Uint8Array, parent: CosmicEntropy): CosmicEntropy {
+  return attestSeed(seedBytes, { timestamp: parent.timestamp, apiSrc: parent.apiSrc });
 }
 
 export async function getCosmicEntropy(): Promise<CosmicEntropy> {
   if (currentMode() !== "real") {
-    return reAttest(randomBytes(32));
+    return attestSeed(randomBytes(32));
   }
   const sdk = orbitportSdk();
   const response = await sdk.ctrng.random();
@@ -63,7 +76,7 @@ export async function getCosmicEntropy(): Promise<CosmicEntropy> {
   if (!cleanHex) {
     throw new Error(`orbitport ctrng returned empty data: ${JSON.stringify(response.data).slice(0, 200)}`);
   }
-  return reAttest(hexToBytes(cleanHex), body.src ?? "trng");
+  return attestSeed(hexToBytes(cleanHex), { apiSrc: body.src ?? "trng" });
 }
 
 export function reAttestPublicKeyHex(): string {

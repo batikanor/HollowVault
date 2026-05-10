@@ -1,7 +1,7 @@
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { fromHex, type CosmicEntropy } from "./orbitport.js";
+import { fromHex, reAttestSubSeed, type CosmicEntropy } from "./orbitport.js";
 import type { SignerHandle } from "./signer.js";
 import { signAttestation, type Attestation } from "./attestation.js";
 
@@ -27,7 +27,10 @@ export async function signBatch(
   for (let index = 0; index < messages.length; index++) {
     const message = messages[index];
     const subSeed = deriveSubSeed(cosmic.seed, index, message);
-    const cosmicForThisMessage: CosmicEntropy = { ...cosmic, seed: bytesToHex(subSeed) };
+    // Re-attest the sub-seed so each sub-attestation independently verifies
+    // through the same 5-check path as a single sign. We inherit the master
+    // timestamp + provenance so freshness windows still apply batch-wide.
+    const cosmicForThisMessage = reAttestSubSeed(subSeed, cosmic);
     attestations.push(await signAttestation(signer, message, cosmicForThisMessage));
   }
   return { batchId: computeBatchId(cosmic.seed), cosmic, attestations };

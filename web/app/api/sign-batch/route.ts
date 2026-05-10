@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCosmicEntropy, signBatch } from "@hollow-vault/core";
-import { getSigner, setupPayload } from "@/lib/server/state";
+import { getSigner } from "@/lib/server/state";
+import { failure, parseJsonBody, setupGuardResponse } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,29 +13,17 @@ const BatchSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const setup = setupPayload();
-  if (setup) {
-    return NextResponse.json({ error: "signer setup required", ...setup }, { status: 503 });
-  }
-  let body: unknown;
-  try { body = await req.json(); }
-  catch { return NextResponse.json({ error: "invalid json" }, { status: 400 }); }
+  const guard = setupGuardResponse();
+  if (guard) return guard;
 
-  const parsed = BatchSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid request", detail: parsed.error.format() },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseJsonBody(req, BatchSchema);
+  if (!parsed.ok) return parsed.res;
 
   try {
     const signer = await getSigner();
     const cosmic = await getCosmicEntropy();
-    const result = await signBatch(signer, parsed.data.messages, cosmic);
-    return NextResponse.json(result);
+    return NextResponse.json(await signBatch(signer, parsed.data.messages, cosmic));
   } catch (err) {
-    console.error("[api/sign-batch] failed", err);
-    return NextResponse.json({ error: "sign-batch failed", detail: String(err) }, { status: 500 });
+    return failure("sign-batch", err);
   }
 }

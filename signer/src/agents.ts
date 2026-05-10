@@ -29,7 +29,7 @@ function newAgentId(): string {
 }
 
 // KMS aliases must match `^[A-Za-z0-9_-]+$`. We strip everything else.
-function sanitizeAlias(name: string): string {
+export function sanitizeAlias(name: string): string {
   const ascii = name
     .normalize("NFKD")
     .replace(/[^\x20-\x7E]/g, "")

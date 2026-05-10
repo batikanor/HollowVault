@@ -6,6 +6,7 @@ import {
   signBatch,
   type SignerHandle,
 } from "@hollow-vault/core";
+import { verifyAttestation } from "../web/lib/verify.js";
 
 process.env.ORBITPORT_MODE = "mock";
 
@@ -55,5 +56,30 @@ describe("batch sub-seed derivation", () => {
     const a = await signBatch(signer, ["one"], cosmic);
     const b = await signBatch(signer, ["two"], cosmic);
     assert.equal(a.batchId, b.batchId, "batchId depends only on master seed");
+  });
+
+  it("each sub-attestation independently passes the full 5-check verifier", async () => {
+    const cosmic = await getCosmicEntropy();
+    const messages = ["sub-verify-1", "sub-verify-2", "sub-verify-3"];
+    const { attestations } = await signBatch(signer, messages, cosmic);
+    for (const att of attestations) {
+      const report = verifyAttestation(att);
+      assert.equal(report.ok, true, `sub-attestation should verify: ${JSON.stringify(report.steps.filter((s) => !s.ok))}`);
+    }
+  });
+
+  it("sub-attestations carry distinct (re-attested) satellite signatures", async () => {
+    const cosmic = await getCosmicEntropy();
+    const { attestations } = await signBatch(signer, ["a", "b", "c"], cosmic);
+    const sigs = new Set(attestations.map((a) => a.cosmic.satelliteSignature));
+    assert.equal(sigs.size, 3, "each sub-seed must get its own satellite signature");
+  });
+
+  it("sub-attestations inherit the master timestamp", async () => {
+    const cosmic = await getCosmicEntropy();
+    const { attestations } = await signBatch(signer, ["m1", "m2"], cosmic);
+    for (const att of attestations) {
+      assert.equal(att.cosmic.timestamp, cosmic.timestamp);
+    }
   });
 });

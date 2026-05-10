@@ -1,38 +1,27 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCosmicEntropy, signAttestation } from "@hollow-vault/core";
-import { getSigner, setupPayload } from "@/lib/server/state";
+import { getSigner } from "@/lib/server/state";
+import { failure, parseJsonBody, setupGuardResponse } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const SignRequest = z.object({ message: z.string().min(1).max(4096) });
+const SignSchema = z.object({ message: z.string().min(1).max(4096) });
 
 export async function POST(req: Request) {
-  const setup = setupPayload();
-  if (setup) {
-    return NextResponse.json({ error: "signer setup required", ...setup }, { status: 503 });
-  }
-  let body: unknown;
-  try { body = await req.json(); }
-  catch { return NextResponse.json({ error: "invalid json" }, { status: 400 }); }
+  const guard = setupGuardResponse();
+  if (guard) return guard;
 
-  const parsed = SignRequest.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid request", detail: parsed.error.format() },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseJsonBody(req, SignSchema);
+  if (!parsed.ok) return parsed.res;
 
   try {
     const signer = await getSigner();
     const cosmic = await getCosmicEntropy();
-    const attestation = await signAttestation(signer, parsed.data.message, cosmic);
-    return NextResponse.json(attestation);
+    return NextResponse.json(await signAttestation(signer, parsed.data.message, cosmic));
   } catch (err) {
-    console.error("[api/sign] failed", err);
-    return NextResponse.json({ error: "sign failed", detail: String(err) }, { status: 500 });
+    return failure("sign", err);
   }
 }

@@ -674,11 +674,23 @@
   let agents = [];
   let selectedAgentId = null;
 
+  let agentsUnavailable = false;
+  let agentsUnavailableReason = "";
+
   async function refreshAgents() {
     const r = await fetch(`${SIGNER}/agents`);
+    if (!r.ok && r.status !== 503) {
+      throw new Error(`agents endpoint returned ${r.status}`);
+    }
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      throw new Error(`agents endpoint returned non-JSON (${ct || "unknown"})`);
+    }
     const j = await r.json();
+    agentsUnavailable = !!j.unavailable;
+    agentsUnavailableReason = j.reason || "";
     agents = j.agents || [];
-    $("agent-count-badge").textContent = `${agents.length} ROSTERED`;
+    $("agent-count-badge").textContent = agentsUnavailable ? "LOCAL-ONLY" : `${agents.length} ROSTERED`;
     renderAgentList();
     if (agents.length > 0 && !agents.some((a) => a.agentId === selectedAgentId)) {
       selectAgent(agents[0].agentId);
@@ -689,6 +701,12 @@
   function renderAgentList() {
     const list = $("agent-list");
     list.innerHTML = "";
+    if (agentsUnavailable) {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="empty-hint" style="color: var(--amber)"><b>AGENT OPS · LOCAL-ONLY</b><br>${agentsUnavailableReason}</div>`;
+      list.appendChild(li);
+      return;
+    }
     if (agents.length === 0) {
       list.innerHTML = '<li><div class="empty-hint">No agents rostered. Use the form on the right to spawn one.</div></li>';
       return;
