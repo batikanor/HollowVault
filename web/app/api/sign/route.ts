@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getCosmicEntropy } from "@/lib/server/orbitport";
+import { signAttestation } from "@/lib/server/attestation";
+import { getSigner, setupPayload } from "@/lib/server/state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
-const SIGNER_URL = process.env.SIGNER_URL ?? "http://localhost:8080";
-
-const SignRequest = z.object({
-  message: z.string().min(1).max(4096),
-});
+const SignRequest = z.object({ message: z.string().min(1).max(4096) });
 
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid json" }, { status: 400 });
+  const setup = setupPayload();
+  if (setup) {
+    return NextResponse.json({ error: "signer setup required", ...setup }, { status: 503 });
   }
+  let body: unknown;
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "invalid json" }, { status: 400 }); }
 
   const parsed = SignRequest.safeParse(body);
   if (!parsed.success) {
@@ -27,25 +28,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const upstream = await fetch(`${SIGNER_URL}/sign`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(parsed.data),
-      cache: "no-store",
-    });
-    const text = await upstream.text();
-    return new NextResponse(text, {
-      status: upstream.status,
-      headers: { "content-type": "application/json" },
-    });
+    const signer = await getSigner();
+    const cosmic = await getCosmicEntropy();
+    const attestation = await signAttestation(signer, parsed.data.message, cosmic);
+    return NextResponse.json(attestation);
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: "signer unreachable",
-        detail: String(err),
-        hint: `is the signer service running on ${SIGNER_URL}? try: docker compose up signer  (or: npm run dev:signer)`,
-      },
-      { status: 502 },
-    );
+    console.error("[api/sign] failed", err);
+    return NextResponse.json({ error: "sign failed", detail: String(err) }, { status: 500 });
   }
 }

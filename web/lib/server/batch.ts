@@ -1,0 +1,34 @@
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
+import { fromHex, type CosmicEntropy } from "./orbitport";
+import type { SignerHandle } from "./signer";
+import { signAttestation, type Attestation } from "./attestation";
+
+const SUB_SEED_DOMAIN = "cosmic-batch/v1";
+const BATCH_ID_DOMAIN = "cosmic-batch-id/v1";
+
+function deriveSubSeed(masterSeedHex: string, index: number, message: string): Uint8Array {
+  const salt = new TextEncoder().encode(`${SUB_SEED_DOMAIN}|${index}|${message}`);
+  return hmac(sha256, fromHex(masterSeedHex), salt);
+}
+
+function computeBatchId(masterSeedHex: string): string {
+  const digest = sha256(new TextEncoder().encode(`${BATCH_ID_DOMAIN}|${masterSeedHex}`));
+  return "0x" + bytesToHex(digest);
+}
+
+export async function signBatch(
+  signer: SignerHandle,
+  messages: string[],
+  cosmic: CosmicEntropy,
+): Promise<{ batchId: string; cosmic: CosmicEntropy; attestations: Attestation[] }> {
+  const attestations: Attestation[] = [];
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index];
+    const subSeed = deriveSubSeed(cosmic.seed, index, message);
+    const cosmicForThisMessage: CosmicEntropy = { ...cosmic, seed: bytesToHex(subSeed) };
+    attestations.push(await signAttestation(signer, message, cosmicForThisMessage));
+  }
+  return { batchId: computeBatchId(cosmic.seed), cosmic, attestations };
+}

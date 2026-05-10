@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const SIGNER = "http://localhost:8080";
+const HEALTH_URL = "/api/health";
 
 interface SetupInfo {
   setupRequired: true;
@@ -25,7 +25,7 @@ export function SetupGate() {
     let cancelled = false;
     async function poll() {
       try {
-        const r = await fetch(`${SIGNER}/health`, { cache: "no-store" });
+        const r = await fetch(HEALTH_URL, { cache: "no-store" });
         const j = await r.json();
         if (cancelled) return;
         setReachable(true);
@@ -47,7 +47,7 @@ export function SetupGate() {
         <div className="max-w-xl rounded-xl border border-rose-500/60 bg-[#11111a] p-7 text-[#f1f1f5] shadow-[0_20px_60px_-12px_rgba(244,114,182,0.25)]">
           <h2 className="m-0 mb-2 text-xl font-semibold text-rose-300">Signer not reachable</h2>
           <p className="text-sm text-[#c8c8d0]">
-            The web app couldn&apos;t reach the signer service at <code className="rounded bg-black/40 px-1 py-0.5 text-cyan-300">{SIGNER}</code>.
+            The web app couldn&apos;t reach the <code className="rounded bg-black/40 px-1 py-0.5 text-cyan-300">{HEALTH_URL}</code> endpoint.
           </p>
           <p className="mt-3 text-sm text-[#c8c8d0]">
             From the project root, run:

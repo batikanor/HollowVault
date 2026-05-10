@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const SIGNER = "http://localhost:8080";
+// Same-origin /api/health works for both Next dev and Vercel deploys.
+const HEALTH_URL = "/api/health";
 
 interface HealthOk {
   ok: true;
@@ -34,7 +35,7 @@ export function LiveModePill() {
     let cancelled = false;
     async function poll() {
       try {
-        const r = await fetch(`${SIGNER}/health`, { cache: "no-store" });
+        const r = await fetch(HEALTH_URL, { cache: "no-store" });
         const j = (await r.json()) as Health;
         if (cancelled) return;
         setReachable(true);

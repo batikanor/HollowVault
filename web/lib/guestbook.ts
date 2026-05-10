@@ -10,7 +10,10 @@ import { dirname, resolve } from "node:path";
 import type { Attestation } from "./types";
 import { verifyAttestation } from "./verify";
 
-const STORE_PATH = resolve(process.cwd(), "..", ".runtime", "guestbook.json");
+// On Vercel only /tmp is writable; locally we keep the project-relative path.
+const STORE_PATH = process.env.VERCEL
+  ? "/tmp/hollow-vault-guestbook.json"
+  : resolve(process.cwd(), "..", ".runtime", "guestbook.json");
 
 export interface GuestbookEntry {
   id: string;
