@@ -3,6 +3,20 @@ import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 200): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === attempts - 1) break;
+      await new Promise((r) => setTimeout(r, baseDelayMs * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 export type SignerType = "kms" | "local";
 
 export interface DeviceIdentity {
@@ -32,12 +46,14 @@ export function kmsSignerFromIdentity(sdk: OrbitportSDK, identity: DeviceIdentit
       if (digest32.length !== 32) {
         throw new Error(`KMS DIGEST sign requires 32 bytes, got ${digest32.length}`);
       }
-      const result = await sdk.kms.sign({
-        keyId: identity.keyId,
-        message: digest32,
-        signingAlgorithm: "ETHEREUM_SECP256K1",
-        messageType: "DIGEST",
-      });
+      const result = await withRetry(() =>
+        sdk.kms.sign({
+          keyId: identity.keyId,
+          message: digest32,
+          signingAlgorithm: "ETHEREUM_SECP256K1",
+          messageType: "DIGEST",
+        }),
+      );
       const sigHex = result.data.Signature.replace(/^0x/, "");
       const sigBytes = hexToBytes(sigHex);
       if (sigBytes.length !== 65) {

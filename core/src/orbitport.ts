@@ -65,12 +65,29 @@ export function reAttestSubSeed(seedBytes: Uint8Array, parent: CosmicEntropy): C
   return attestSeed(seedBytes, { timestamp: parent.timestamp, apiSrc: parent.apiSrc });
 }
 
+// Retries protect against transient Orbitport gateway 5xx / network blips so
+// a single unlucky tick doesn't surface as a /api/sign 500 to end users.
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 200): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === attempts - 1) break;
+      const delay = baseDelayMs * (attempt + 1);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 export async function getCosmicEntropy(): Promise<CosmicEntropy> {
   if (currentMode() !== "real") {
     return attestSeed(randomBytes(32));
   }
   const sdk = orbitportSdk();
-  const response = await sdk.ctrng.random();
+  const response = await withRetry(() => sdk.ctrng.random());
   const body = response.data as unknown as { src?: string; data?: string };
   const cleanHex = (body?.data ?? "").replace(/^0x/, "");
   if (!cleanHex) {

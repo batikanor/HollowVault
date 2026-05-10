@@ -118,6 +118,51 @@ describe("local signer.sign", () => {
     await assert.rejects(handle.sign(new Uint8Array(32)), /65 \(r\|\|s\|\|v\)/);
   });
 
+  it("kmsSignerFromIdentity retries on transient SDK errors then succeeds", async () => {
+    let calls = 0;
+    const goodSig = "0x" + "11".repeat(64) + "1b";
+    const fakeSdk = {
+      kms: {
+        sign: async () => {
+          calls++;
+          if (calls < 2) throw new Error("transient gateway 500");
+          return { data: { Signature: goodSig } };
+        },
+      },
+    };
+    const handle = kmsSignerFromIdentity(fakeSdk as never, {
+      signerType: "kms",
+      address: "0x" + "ab".repeat(20),
+      publicKey: "0x04" + "00".repeat(64),
+      keyId: "kms:test",
+      createdAt: new Date().toISOString(),
+    });
+    const out = await handle.sign(new Uint8Array(32));
+    assert.equal(calls, 2, "should retry once after transient failure");
+    assert.equal(out.compactSig.length, 64);
+  });
+
+  it("kmsSignerFromIdentity gives up after 3 attempts and surfaces the original error", async () => {
+    let calls = 0;
+    const fakeSdk = {
+      kms: {
+        sign: async () => {
+          calls++;
+          throw new Error("permanent gateway 500");
+        },
+      },
+    };
+    const handle = kmsSignerFromIdentity(fakeSdk as never, {
+      signerType: "kms",
+      address: "0x" + "ab".repeat(20),
+      publicKey: "0x04" + "00".repeat(64),
+      keyId: "kms:test",
+      createdAt: new Date().toISOString(),
+    });
+    await assert.rejects(handle.sign(new Uint8Array(32)), /permanent gateway 500/);
+    assert.equal(calls, 3);
+  });
+
   it("kmsSignerFromIdentity decodes v in {27,28} → recoveryId in {0,1}", async () => {
     function makeFakeSig(v: number): string {
       return "0x" + "11".repeat(64) + v.toString(16).padStart(2, "0");
