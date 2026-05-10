@@ -188,7 +188,10 @@
     sp.style.top = rect.top - pad + "px";
     sp.style.width = rect.width + pad * 2 + "px";
     sp.style.height = rect.height + pad * 2 + "px";
-    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    // inline:'nearest' avoids horizontal scrolling — the page is vertical-scroll
+    // only, and asking for inline:'center' on a wide row caused the grid to
+    // re-layout against a much larger virtual width.
+    target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
     return rect;
   }
 
