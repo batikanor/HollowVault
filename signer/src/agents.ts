@@ -55,7 +55,7 @@ export function listAgents(dataDir: string): Agent[] {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export function persistAgent(dataDir: string, agent: Agent): void {
+function persistAgent(dataDir: string, agent: Agent): void {
   const path = agentPath(dataDir, agent.agentId);
   mkdirSync(agentsDir(dataDir), { recursive: true });
   writeFileSync(path, JSON.stringify(agent, null, 2), { mode: FILE_MODE });

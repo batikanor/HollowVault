@@ -2,6 +2,7 @@ import { OrbitportSDK } from "@spacecomputer-io/orbitport-sdk-ts";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
+import { withRetry } from "./retry.js";
 
 export interface CosmicEntropy {
   seed: string;
@@ -63,23 +64,6 @@ function attestSeed(
  */
 export function reAttestSubSeed(seedBytes: Uint8Array, parent: CosmicEntropy): CosmicEntropy {
   return attestSeed(seedBytes, { timestamp: parent.timestamp, apiSrc: parent.apiSrc });
-}
-
-// Retries protect against transient Orbitport gateway 5xx / network blips so
-// a single unlucky tick doesn't surface as a /api/sign 500 to end users.
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 200): Promise<T> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (attempt === attempts - 1) break;
-      const delay = baseDelayMs * (attempt + 1);
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
-  throw lastErr;
 }
 
 export async function getCosmicEntropy(): Promise<CosmicEntropy> {

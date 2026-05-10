@@ -20,7 +20,7 @@
     "start:web": "npm --workspace web run start",
     "smoke": "tsx scripts/smoke.ts",
     "sim:contract": "tsx scripts/contract-sim.ts",
-    "test:unit": "node --import tsx --test tests/payload-binding.test.ts tests/verifier.test.ts tests/batch.test.ts tests/eip712.test.ts tests/nonce-attack.test.ts tests/local-signer.test.ts tests/policy.test.ts tests/audit.test.ts tests/cache.test.ts tests/serverless-state.test.ts tests/orbitport.test.ts tests/typed-roundtrip.test.ts tests/agents-alias.test.ts tests/drand-adapter.test.ts tests/signer-edges.test.ts",
+    "test:unit": "node --import tsx --test tests/payload-binding.test.ts tests/verifier.test.ts tests/batch.test.ts tests/eip712.test.ts tests/nonce-attack.test.ts tests/local-signer.test.ts tests/policy.test.ts tests/audit.test.ts tests/cache.test.ts tests/serverless-state.test.ts tests/orbitport.test.ts tests/typed-roundtrip.test.ts tests/agents-alias.test.ts tests/drand-adapter.test.ts tests/signer-edges.test.ts tests/retry.test.ts",
     "test:kms": "node --env-file=.env --import tsx --test tests/kms-integration.test.ts",
     "test": "npm run test:unit && npm run smoke && npm run sim:contract",
     "test:contracts": "cd contracts && PATH=\"$HOME/.foundry/bin:$PATH\" forge test",

@@ -2,20 +2,7 @@ import { OrbitportSDK } from "@spacecomputer-io/orbitport-sdk-ts";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
-
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 200): Promise<T> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (attempt === attempts - 1) break;
-      await new Promise((r) => setTimeout(r, baseDelayMs * (attempt + 1)));
-    }
-  }
-  throw lastErr;
-}
+import { withRetry } from "./retry.js";
 
 export type SignerType = "kms" | "local";
 

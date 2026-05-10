@@ -3,10 +3,9 @@ import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
+import { PAYLOAD_SCHEME, PAYLOAD_SEPARATOR } from "@hollow-vault/core";
 import type { Attestation, VerificationReport, VerificationStep } from "./types";
 
-const PAYLOAD_SCHEME = "hollow-vault/v1|";
-const PAYLOAD_SEPARATOR = "|";
 const FRESHNESS_PAST_LIMIT_MS = 120_000;
 const FRESHNESS_FUTURE_LIMIT_MS = 24 * 3_600_000;
 
