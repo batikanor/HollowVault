@@ -162,8 +162,8 @@
     s.textContent = `
       #hv-tour-overlay { position: fixed; inset: 0; z-index: 99999; pointer-events: none; }
       #hv-tour-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.62); pointer-events: auto; }
-      #hv-tour-spotlight { position: fixed; box-shadow: 0 0 0 9999px rgba(0,0,0,0.62); border: 2px solid #ff8c00; border-radius: 6px; pointer-events: none; transition: left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease; }
-      #hv-tour-card { position: fixed; max-width: 460px; background: #0c0c0c; border: 1px solid #ff8c00; border-radius: 6px; padding: 16px 18px; pointer-events: auto; color: #ffd278; font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.55; box-shadow: 0 0 40px rgba(255,140,0,0.4); transition: left 0.2s ease, top 0.2s ease; }
+      #hv-tour-spotlight { position: fixed; box-shadow: 0 0 0 9999px rgba(0,0,0,0.62); border: 2px solid #ff8c00; border-radius: 6px; pointer-events: none; }
+      #hv-tour-card { position: fixed; max-width: 460px; background: #0c0c0c; border: 1px solid #ff8c00; border-radius: 6px; padding: 16px 18px; pointer-events: auto; color: #ffd278; font-family: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; font-size: 12px; line-height: 1.55; box-shadow: 0 0 40px rgba(255,140,0,0.4); }
       #hv-tour-card.centered { left: 50%; top: 50%; transform: translate(-50%, -50%); transition: none; }
       #hv-tour-card h3 { margin: 0 0 10px; color: #ff8c00; font-size: 13px; letter-spacing: 0.05em; }
       #hv-tour-card .body { color: #ffd278; }
